@@ -222,3 +222,40 @@ main{padding-bottom:calc(22px + 76px + var(--phone-safe-bottom))!important}
   body{padding-bottom:max(var(--phone-safe-bottom),0px)}
   #mxBar{padding-bottom:max(6px,var(--phone-safe-bottom))!important}
 }
+
+
+/* Critical correction: the app is full-width, not a 480px phone mockup.
+   Keep the same responsive layout on real Android and iPhone viewports. */
+html,body{width:100%!important;max-width:none!important;margin:0!important}
+body{min-width:0!important;position:relative!important;left:auto!important;right:auto!important;box-shadow:none!important;border:0!important}
+.topbar{width:100%!important;max-width:none!important;left:auto!important;right:auto!important}
+main{width:100%!important;max-width:none!important;margin:0!important;padding-left:clamp(12px,3vw,28px)!important;padding-right:clamp(12px,3vw,28px)!important}
+#studio{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important}
+#studio #homeSection{width:100%!important;max-width:none!important;margin:0!important;padding:10px 0 calc(96px + env(safe-area-inset-bottom,0px))!important}
+#studio #homeSection>.ms-home,#studio #homeSection .ms-home{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important}
+#studio #homeSection .ms-home-layout{display:block!important;width:100%!important;max-width:none!important;min-width:0!important}
+#studio #homeSection .ms-home-main{display:block!important;width:100%!important;max-width:none!important;min-width:0!important}
+#studio #homeSection .ms-home-aside,#studio #homeSection #msTopPicks,#studio #homeSection #msPicksGrid{display:none!important}
+#studio #homeSection .ms-search{width:100%!important;max-width:none!important}
+#studio #homeSection .ms-story-strip{width:100%!important;max-width:none!important}
+#studio #homeSection .ms-compose{width:100%!important;max-width:none!important}
+#studio #homeSection #hmFeed{display:block!important;width:100%!important;max-width:none!important;min-width:0!important}
+#studio #homeSection #hmFeed>*{width:100%!important;max-width:none!important;min-width:0!important}
+#studio #homeSection .hm-post,#studio #homeSection .ms-post{width:100%!important;max-width:none!important;min-width:0!important}
+#studio #homeSection .hm-head,#studio #homeSection .hm-counts,#studio #homeSection .hm-actions{width:100%;min-width:0}
+#studio #homeSection :is(.hm-title,.hm-body,.hm-sub,.hm-head strong,.hm-actions button){word-break:normal!important;overflow-wrap:break-word!important;white-space:normal}
+#studio #homeSection .hm-meet{width:100%!important;max-width:none!important;margin:14px 0!important}
+#studio #homeSection .ms-footer-links{width:100%!important;max-width:none!important}
+#mxBar{left:0!important;right:0!important;transform:none!important;width:100%!important;max-width:none!important}
+@media(min-width:481px){
+ html{background:var(--phone-bg)!important}
+ body{border:0!important}
+ main{max-width:none!important}
+ .topbar{max-width:none!important}
+ #mxBar{max-width:none!important}
+}
+@media(max-width:480px){
+ main{padding-left:12px!important;padding-right:12px!important}
+ #studio #homeSection{padding-top:8px!important}
+ #studio #homeSection .ms-home-layout{grid-template-columns:minmax(0,1fr)!important}
+}
