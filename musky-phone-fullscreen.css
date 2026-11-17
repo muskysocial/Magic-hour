@@ -132,3 +132,93 @@ html.mx-light #studio .pane p,html.mx-light #studio .pane small,html.mx-light #s
   #mxBar button{font-size:9px!important}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* Screen-by-screen phone pass: Android Chrome and iPhone Safari. */
+:root{--phone-safe-top:env(safe-area-inset-top,0px);--phone-safe-bottom:env(safe-area-inset-bottom,0px)}
+html{min-height:100%;overscroll-behavior-x:none}
+body{min-height:100vh;min-height:100dvh;overscroll-behavior-x:none}
+.topbar{top:0!important;padding-top:var(--phone-safe-top)!important;height:calc(58px + var(--phone-safe-top))!important;min-height:calc(58px + var(--phone-safe-top))!important}
+main{padding-bottom:calc(22px + 76px + var(--phone-safe-bottom))!important}
+#studio{padding-bottom:calc(78px + var(--phone-safe-bottom))!important;min-height:calc(100dvh - 58px - var(--phone-safe-top))}
+#studio .pane{scroll-margin-top:calc(66px + var(--phone-safe-top));overflow-wrap:anywhere}
+#studio .pane :is(input,textarea,select,button){max-width:100%}
+#studio .pane :is(input,textarea,select){font-size:16px!important}
+#studio .pane button{min-height:42px}
+#mxBar{padding-bottom:calc(6px + var(--phone-safe-bottom))!important;min-height:calc(62px + var(--phone-safe-bottom))!important}
+#mxBar button{min-height:48px!important;white-space:normal;line-height:1.15}
+#mxBackNav{padding-top:calc(7px + 2px)!important}
+#studio #homeSection .ms-home{width:100%;min-width:0}
+#studio #homeSection .ms-search{min-width:0}
+#studio #homeSection .ms-search input{min-width:0;width:100%}
+#studio #homeSection .ms-story-strip{margin-right:-2px;padding-right:4px;overscroll-behavior-x:contain}
+#studio #homeSection .ms-story{min-height:86px}
+#studio #homeSection .ms-compose{min-width:0}
+#studio #homeSection .ms-compose .hm-pill{min-width:0;text-align:left}
+#studio #homeSection .ms-home-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#studio #homeSection .ms-shortcut{min-width:0;min-height:88px;padding:11px;border:1px solid var(--phone-line);border-radius:15px;background:#fff;text-align:left}
+#studio #homeSection .ms-shortcut strong,#studio #homeSection .ms-shortcut small{display:block;overflow-wrap:anywhere}
+#studio #homeSection .ms-post{min-width:0}
+#studio #homeSection .ms-post .hm-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+#studio #homeSection .ms-post .hm-actions button{min-width:0;white-space:nowrap}
+#studio #exploreSection .ex-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#studio #exploreSection .ex-card{min-width:0;min-height:145px;padding:12px;border-radius:16px;overflow-wrap:anywhere}
+#studio #exploreSection .ex-card .d{line-height:1.35}
+#studio #exploreSection .ex-row{min-height:50px;gap:10px}
+#studio #shopSection .sh-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+#studio #shopSection .gs-card{min-width:0;overflow:hidden;padding:9px!important}
+#studio #shopSection .gs-card img{width:100%;aspect-ratio:1/1;object-fit:cover}
+#studio #shopSection .gs-card .pt-btn{width:100%;white-space:normal}
+#studio #notifSection .mx-notifications{width:100%;max-width:none;padding-bottom:12px}
+#studio #notifSection .mx-notifications-head{align-items:flex-start}
+#studio #notifSection .mx-notif-filters{overscroll-behavior-x:contain;scrollbar-width:none}
+#studio #notifSection .mx-notif-filters::-webkit-scrollbar{display:none}
+#studio #notifSection .mx-notif-item{min-width:0;overflow-wrap:anywhere}
+#studio #profileSection .pf-hero,#studio #profileSection .md-profile-redesign{width:100%;max-width:100%;min-width:0}
+#studio #profileSection .md-profile-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+#studio #profileSection .md-profile-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#studio #settingsSection .sh-settings,#studio #settingsSection .sh-settings-group{min-width:0}
+#studio #settingsSection .sh-settings-row{min-width:0;gap:10px}
+#studio #settingsSection .sh-settings-row small{overflow-wrap:anywhere}
+#studio #settingsSection .sh-row{display:flex;flex-wrap:wrap}
+#studio #settingsSection .sh-row button{flex:1;min-width:0}
+#studio #chatSection.mx-chat-fullscreen{padding-top:calc(var(--phone-safe-top) + 10px)!important;padding-bottom:calc(var(--phone-safe-bottom) + 10px)!important}
+#studio #chatSection .ch-log{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#studio #chatSection .ch-bar{padding-bottom:2px}
+#studio #chatSection .ch-bar textarea{min-height:46px;max-height:120px}
+#studio #chatSection .ch-go{min-height:46px;flex:none}
+#studio #createPostSection .pt{width:100%;min-width:0}
+#studio #createPostSection .hm-badge{display:inline-flex;align-items:center}
+#studio .sh-grid,#studio .ex-grid{min-width:0}
+#studio .sh-grid>*{min-width:0;overflow-wrap:anywhere}
+#studio .pt-row{align-items:flex-start;flex-wrap:wrap}
+#studio .pt-row>span:last-child{display:flex;gap:6px;flex-wrap:wrap}
+#studio .pt-btn{white-space:normal;min-height:42px}
+#studio .ms-notifications-head button{flex:none}
+@media(max-width:380px){
+  main{padding-left:10px!important;padding-right:10px!important}
+  .topbar{padding-left:10px!important;padding-right:10px!important}
+  .topbar .brand strong{font-size:14px!important}
+  .top-actions{gap:4px}
+  #studio .pane{padding:12px!important;border-radius:15px!important}
+  #studio #exploreSection .ex-card{min-height:132px;padding:10px}
+  #studio #shopSection .sh-grid{gap:7px!important}
+  #studio #shopSection .gs-card{padding:7px!important}
+  #studio #homeSection .ms-post .hm-actions button{font-size:11px}
+  #mxBar{padding-left:4px!important;padding-right:4px!important}
+  #mxBar button{font-size:9px!important}
+}
+@media(max-width:340px){
+  #studio #exploreSection .ex-grid,#studio #shopSection .sh-grid{grid-template-columns:minmax(0,1fr)!important}
+  #studio #profileSection .md-profile-stats{gap:5px}
+  #studio #profileSection .md-profile-stats .md-count{padding:9px 5px}
+  #studio #homeSection .ms-post .hm-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:481px){
+  body{min-height:100dvh}
+  #mxBar{max-width:480px!important}
+}
+@supports(padding:max(0px)){
+  body{padding-bottom:max(var(--phone-safe-bottom),0px)}
+  #mxBar{padding-bottom:max(6px,var(--phone-safe-bottom))!important}
+}
