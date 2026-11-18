@@ -1,1 +1,0 @@
--- Historical placeholder. The complete migration is preserved under the applied Supabase version 20261022044843_separate_daily_and_paid_coins.sql.

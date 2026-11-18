@@ -1,1 +1,0 @@
--- Historical placeholder. The complete migration is preserved under the applied Supabase version 20261022044918_finalize_verified_payment.sql.

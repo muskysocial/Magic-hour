@@ -1,1 +1,0 @@
--- Historical placeholder. The complete migration is preserved under the applied Supabase version 20261022044900_credit_balance_functions.sql.
