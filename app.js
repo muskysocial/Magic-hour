@@ -34,6 +34,7 @@ let userAssets = [];
 let walletTransactions = [];
 let workspaceBusy = false;
 let workspaceNotice = "";
+let videoDiagnosticResult = null;
 let currentProjectId = null;
 let dismissedRecentAssetIds = new Set();
 
@@ -113,7 +114,16 @@ function recentThumbs(kind,selectedId=""){
  if(!images.length)return '<p class="recent-empty">Your recently used images will appear here.</p>';
  return `<div class="recent-strip" aria-label="Recently used images">${images.map(asset=>`<div class="recent-thumb-wrap"><button type="button" class="recent-thumb ${asset.id===selectedId?"selected":""}" data-recent-${kind}="${esc(asset.id)}" aria-label="Use ${esc(asset.file_name||"recent image")}" aria-pressed="${asset.id===selectedId}"><img src="${esc(asset.signedUrl)}" alt="${esc(asset.file_name||"Recent image")}" loading="lazy">${asset.id===selectedId?'<span class="recent-check">✓</span>':""}</button><button type="button" class="recent-dismiss" data-dismiss-recent="${esc(asset.id)}" aria-label="Hide from recent images">×</button></div>`).join("")}</div>`;
 }
-function renderTool(){const t=toolById(activeTool);if(activeTool==="background-remover")return `
+function renderTool(){const t=toolById(activeTool);if(activeTool==="ai-video"||activeTool==="image-to-video"){const heading=activeTool==="image-to-video"?"Image to Video":"AI Video Animate";return `
+<div class="section-head"><div><h1 class="page-title">${heading}</h1><p class="page-sub">Check your connected Google AI account for video-generation access.</p></div><button class="back-btn" data-action="back">← Back</button></div>
+<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("video",27)}</div><div><h2>Google Veo connection</h2><p>Secure provider check through Supabase</p></div></div>
+<div class="notice">Your Gemini API key stays private on the server. This check discovers which video models your key can access before we enable generation.</div>
+<button class="primary-btn" data-action="check-video-access" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Checking Google access…":"Check video-generation access"}</button>
+<div id="file-status" class="page-sub">${esc(workspaceNotice||"Not checked yet. Run the access check to see which models are available.")}</div>
+${videoDiagnosticResult?`<div class="account-panel"><b>${videoDiagnosticResult.ok?(videoDiagnosticResult.hasVideoGeneration?"Video model access detected":"No video-generation model detected"):"Connection check needs attention"}</b><p>${esc(videoDiagnosticResult.error||"")}</p>${(videoDiagnosticResult.videoModels||[]).map(m=>`<p><b>${esc(m.displayName||m.name)}</b><br><small>${esc(m.name)} · ${esc((m.supportedGenerationMethods||[]).join(", ")||"No generation methods listed")}</small></p>`).join("")}${videoDiagnosticResult.ok?`<small>Models checked: ${Number(videoDiagnosticResult.totalModels||0)} · ${esc(videoDiagnosticResult.checkedAt||"")}</small>`:""}</div>`:""}
+<p class="page-sub">This step checks access only. Video generation will be connected after we confirm the exact model and supported API workflow.</p>
+</div>`;}
+if(activeTool==="background-remover")return `
 <div class="section-head"><div><h1 class="page-title">Background Remover</h1><p class="page-sub">Remove image backgrounds in seconds and save the transparent PNG to your Library.</p></div><button class="back-btn" data-action="back">← Back</button></div>
 <div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("scissors",27)}</div><div><h2>AI Background Removal</h2><p>Powered by remove.bg</p></div></div>
 <div class="notice">Upload a JPG, PNG or WebP image up to 12 MB. Your original and transparent result are stored in your private Supabase Library.</div>
@@ -211,7 +221,18 @@ if(b.dataset.recentFace||b.dataset.recentTarget){const assetId=b.dataset.recentF
 }
 if(b.dataset.deleteAsset){const asset=userAssets.find(a=>a.id===b.dataset.deleteAsset);if(!asset)return;if(!confirm(`Delete "${asset.file_name}" from your history and private library? This cannot be undone.`))return;b.disabled=true;b.textContent="Deleting…";try{const {error:storageError}=await supabase.storage.from("magic-hour-assets").remove([asset.storage_path]);if(storageError)throw storageError;const {error:rowError}=await supabase.from("mh_assets").delete().eq("id",asset.id).eq("user_id",currentUser.id);if(rowError)throw rowError;if(selectedReferenceAssetId===asset.id){selectedReferenceAssetId="";referencePreviewUrl="";}if(selectedTargetAssetId===asset.id){selectedTargetAssetId="";targetPreviewUrl="";}await loadAccountData();}catch(error){alert("Could not delete this image: "+(error?.message||String(error)));b.disabled=false;b.textContent="Delete";}return;}
 if(b.dataset.preview){const url=b.dataset.preview;const viewer=document.createElement("div");viewer.className="image-lightbox";viewer.innerHTML='<button class="lightbox-close" aria-label="Close">×</button><img alt="Preview">';viewer.querySelector("img").src=url;viewer.addEventListener("click",event=>{if(event.target===viewer||event.target.closest(".lightbox-close"))viewer.remove();});document.body.appendChild(viewer);return;}
-if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";render();return;}if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="run-background"){
+if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";videoDiagnosticResult=null;render();return;}if(b.dataset.action==="check-video-access"){
+  workspaceBusy=true;workspaceNotice="Checking the Gemini API model catalogue securely…";videoDiagnosticResult=null;render();
+  try{
+   const {data,error}=await supabase.functions.invoke("gemini-video-diagnostics",{body:{}});
+   if(error)throw error;
+   videoDiagnosticResult=data||{ok:false,error:"Google diagnostics returned an empty response."};
+   workspaceNotice=videoDiagnosticResult.ok?(videoDiagnosticResult.hasVideoGeneration?"Google video-generation access was detected.":"Gemini key responded, but no video-generation model is listed for this account."):(videoDiagnosticResult.error||"Could not verify Google video access.");
+  }catch(error){videoDiagnosticResult={ok:false,error:error?.message||String(error)};workspaceNotice="Video access check failed: "+videoDiagnosticResult.error;}
+  finally{workspaceBusy=false;render();}
+  return;
+ }
+ if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="run-background"){
  if(!selectedAssetFile){workspaceNotice="Choose an image first.";render();return;}
  const allowed=["image/jpeg","image/png","image/webp"];
  if(!allowed.includes(selectedAssetFile.type)){workspaceNotice="Use a JPG, PNG or WebP image.";render();return;}
