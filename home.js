@@ -449,10 +449,7 @@ html.mx-light body{background:#f7f8fc!important}
     ["profileSection", "🙂", "You", "linear-gradient(160deg,#1877f2,#6aa8ff)"],
     ["peopleSection", "👥", "Meet people", "linear-gradient(160deg,#1877f2,#f45b9a)"],
     ["notifSection", "🔔", "Notifications", "linear-gradient(160deg,#1877f2,#8a5cf6)"],
-    ["datingSection", "❤️", "Dating Guide", "linear-gradient(160deg,#ff5f6d,#ffc371)"],
     ["jobsSection", "💼", "Job Updates", "linear-gradient(160deg,#11998e,#38ef7d)"],
-    ["toolsHubSection", "✨", "AI Tools", "linear-gradient(160deg,#3a1c71,#6a82fb)"],
-    ["shopSection", "🎁", "Gifts", "linear-gradient(160deg,#f7971e,#ffb347)"],
     ["librarySection", "📚", "Library", "linear-gradient(160deg,#0f9b8e,#4facfe)"],
   ];
   window.shell.homeRenderer = (el, ctx) => {
@@ -464,17 +461,15 @@ html.mx-light body{background:#f7f8fc!important}
       STORIES.slice(1).map(([id, ic, label, bg]) => '<button class="ms-story" data-go="' + id + '"><span class="ms-story-ring"><span style="background:' + bg + ';color:#fff">' + ic + '</span></span><span>' + label + '</span></button>').join("") + '</div>' +
       '<div class="ms-compose"><div class="hm-av" id="hmAv">?</div><button class="hm-pill" id="hmShare">What would you like to share?</button></div>' +
       '<div id="hmFeed">Loading feed…</div></div>' +
-      '<aside class="ms-home-aside" aria-label="Marketplace and discovery">' +
-      '<div class="ms-home-shortcuts" aria-label="Quick access"><button class="ms-shortcut ms-shortcut-market" data-go="shopSection"><span>🛍</span><strong>Marketplace</strong><small>Buy & sell</small></button><button class="ms-shortcut" data-go="profileSection"><span>▦</span><strong>My Posts</strong><small>Your content</small></button><button class="ms-shortcut" data-go="peopleSection"><span>♧</span><strong>Groups</strong><small>Join & connect</small></button><button class="ms-shortcut" data-go="eventsSection"><span>▣</span><strong>Events</strong><small>What’s happening</small></button></div>' +
+      '<aside class="ms-home-aside" aria-label="Your shortcuts and discovery">' +
+      '<div class="ms-home-shortcuts" aria-label="Quick access"><button class="ms-shortcut" data-go="profileSection"><span>▦</span><strong>My Posts</strong><small>Your content</small></button><button class="ms-shortcut" data-go="peopleSection"><span>♧</span><strong>Groups</strong><small>Join & connect</small></button><button class="ms-shortcut" data-go="eventsSection"><span>▣</span><strong>Events</strong><small>What’s happening</small></button></div>' +
       '<div class="ms-creditline"><span><strong>MuskySocials</strong> · Connect, discover, create</span><span>🪙 ' + (credits === null || credits === undefined ? "…" : credits) + '</span></div>' +
-      '<section id="msTopPicks"><div class="ms-section-head"><strong>Top Picks for You</strong><button type="button" id="msSeeShop">See all →</button></div><div class="ms-picks-grid" id="msPicksGrid"><div class="ms-pick-card"><div class="ms-pick-copy">Loading marketplace picks…</div></div></div></section>' +
+
       '<button class="hm-meet" id="hmMeet" type="button"><span class="hm-meet-icon">👥</span><span class="hm-meet-copy"><strong>Discover friends</strong><small>Find people, follow members and grow your circle</small></span><span class="hm-meet-arrow">›</span></button></aside></div>' +
       '<div class="ms-footer-links"><a href="#" data-go="aboutSection">About</a><a href="#" data-go="aboutSection">Accessibility</a><a href="#" data-go="contactSection">Help Center</a><a href="#" data-go="privacySection">Privacy</a><a href="#" data-go="privacySection">Terms</a><a href="#" data-go="shopSection">Advertising</a></div></div>';
     paintAv(q("#hmAv"));
     paintFeed();
     fetchFeed(false);
-    loadHomePicks();
-    const seeShop=q("#msSeeShop"); if(seeShop) seeShop.addEventListener("click",()=>go("shopSection"));
     async function loadHomePicks(){
       const grid=q("#msPicksGrid"); if(!grid)return;
       try{
