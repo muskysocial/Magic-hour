@@ -147,7 +147,7 @@ function start() {
 .top-actions > span:not(.online-dot):not(#authCredits):not(#xTools){display:none}
 #xTools{display:flex;align-items:center;gap:8px;margin-left:8px}
 #xLang{padding:5px 6px;border-radius:8px;border:1px solid var(--sh-line,#ccd0d5);background:var(--sh-card,#fff);color:var(--sh-text,#050505);font-size:13px}
-#xAv{width:34px;height:34px;border-radius:50%;border:0;background:var(--sh-blue,#1877f2);color:#fff;font-weight:700;font-size:15px}
+#xAv{width:38px;height:38px;border-radius:50%;border:0;background:var(--sh-blue,#1877f2);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center}#xAv svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .xs{padding-bottom:10px}
 /* Own-profile visual refresh; preserve every existing account control and handler. */
 #profileSection .pt>h2{font-size:27px;letter-spacing:-.04em;margin:4px 0 16px}
@@ -199,7 +199,7 @@ html.mx-light .topbar #xAv{color:#fff!important}
   document.head.appendChild(css);
   q(".top-actions").insertAdjacentHTML("beforeend",
     "<span id='xTools'><select id='xLang' aria-label='Language'><option value='en'>EN</option><option value='pid'>PID</option>" +
-    "<option value='fr'>FR</option><option value='es'>ES</option></select><button id='xAv' aria-label='Profile'>?</button></span>");
+    "<option value='fr'>FR</option><option value='es'>ES</option></select><button id='xAv' aria-label='Profile'><svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg></button></span>");
   const sel = q("#xLang");
   sel.value = lang;
   sel.addEventListener("change", () => setLang(sel.value));
@@ -231,7 +231,7 @@ html.mx-light .topbar #xAv{color:#fff!important}
     "<input id='pfP1' class='pt-in' type='password' autocomplete='new-password' placeholder='New password (8+ characters)'>" +
     "<input id='pfP2' class='pt-in' type='password' autocomplete='new-password' placeholder='Type it again'>" +
     "<button class='pt-btn' id='pfPass'>Change password</button></details>" +
-    "<button class='pf-row' data-go='settingsSection'><span>🎨 Appearance and text size</span><span>›</span></button>" +
+    "<button class='pf-row' data-go='settingsSection'><span>🎨 Appearance</span><span>›</span></button>" +
     "<div class='pf-group'>Account features</div>" +
     "<button class='pf-row' data-go='notifSection'><span>🔔 Notifications</span><span>›</span></button>" +
     ["🛡️ Two-factor sign-in", "📱 Devices and active sessions", "👁️ Who can see my profile", "🔖 Saved items",
