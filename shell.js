@@ -25,6 +25,7 @@ body{padding-bottom:0}
 #mxBackButton .mx-back-arrow{font-size:22px;line-height:1}
 #mxBar button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;border:0;background:none;color:var(--sh-sub);font-size:calc(12px * var(--mx-font-scale,1));overflow-wrap:anywhere}
 #mxBar button span{font-size:22px;line-height:1.1}
+#mxBar button span svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
 #mxBar button.on{color:var(--sh-blue);font-weight:700}
 .sh{color:var(--sh-text);font-size:calc(clamp(14px,3.9vw,16px) * var(--mx-font-scale,1));min-width:0;overflow-wrap:anywhere}
 .sh h2{margin:0 0 10px;font-size:calc(clamp(20px,5.5vw,24px) * var(--mx-font-scale,1))}
@@ -520,8 +521,8 @@ function init() {
   // Bottom bar
   const bar = document.createElement("nav");
   bar.id = "mxBar";
-  bar.innerHTML = [["homeSection", "⌂", "Home"], ["shopSection", "▣", "Marketplace"], ["createPostSection", "＋", "Create"], ["profileSection", "♙", "Profile"]]
-    .map(([id, i, l]) => '<button data-go="' + id + '" aria-label="' + l + '"><span>' + i + "</span>" + l + "</button>").join("");
+  bar.innerHTML = [["homeSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', "Home"], ["shopSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18l-1 13H4L3 8Z"/><path d="M8 8a4 4 0 0 1 8 0"/></svg>', "Marketplace"], ["createPostSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', "Create"], ["profileSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', "Profile"]]
+    .map(([id, i, l]) => '<button data-go="' + id + '" aria-label="' + l + '"' + (id === "homeSection" ? ' class="on"' : "") + '><span>' + i + "</span>" + l + "</button>").join("");
   document.body.appendChild(bar);
 
   // Global in-app back navigation: remember section transitions and provide Home as fallback.
