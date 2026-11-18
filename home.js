@@ -245,11 +245,11 @@ html.mx-light body{background:#f7f8fc!important}
   // Upgrade the existing header in place; keep the app shell and its auth hooks.
   const topbar=q(".topbar");
   if(topbar&&!q("#msMenuButton")){
-    const menu=document.createElement("button");menu.id="msMenuButton";menu.className="ms-top-menu";menu.type="button";menu.setAttribute("aria-label","Open navigation menu");menu.textContent="☰";
+    const menu=document.createElement("button");menu.id="msMenuButton";menu.className="ms-top-menu";menu.type="button";menu.setAttribute("aria-label","Open navigation menu");menu.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
     const brand=topbar.querySelector(".brand");if(brand)topbar.insertBefore(menu,brand);
     const actions=topbar.querySelector(".top-actions");
     if(actions&&!q("#msTopAvatar")){const avatar=document.createElement("button");avatar.id="msTopAvatar";avatar.className="ms-top-avatar";avatar.type="button";avatar.setAttribute("aria-label","Open your profile");avatar.textContent="M";actions.appendChild(avatar);avatar.addEventListener("click",()=>window.shell.go("profileSection"));}
-    const quick=document.createElement("div");quick.id="msQuickMenu";quick.innerHTML='<button data-msgo="homeSection">🏠 Home</button><button data-msgo="peopleSection">👥 Friends & Discover</button><button data-msgo="notifSection">♡ Activity</button><button data-msgo="profileSection">👤 My profile</button><button data-msgo="shopSection">🛍 Marketplace</button><button data-msgo="toolsHubSection">✨ Tools &amp; Services</button><button data-msgo="settingsSection">⚙ Settings</button>';
+    const quick=document.createElement("div");quick.id="msQuickMenu";quick.innerHTML='<button data-msgo="homeSection"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Home</button><button data-msgo="peopleSection"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5"/></svg>Friends &amp; Discover</button><button data-msgo="notifSection"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>Activity</button><button data-msgo="librarySection"><svg viewBox="0 0 24 24"><path d="M4 4h12v16H4zM8 8h4m-4 4h4m8-8v16"/></svg>Library</button><button data-msgo="shopSection"><svg viewBox="0 0 24 24"><path d="M4 8h16l-1 13H5L4 8Z M8 8a4 4 0 0 1 8 0"/></svg>Gifts</button><button data-msgo="toolsHubSection"><svg viewBox="0 0 24 24"><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2ZM19 16l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"/></svg>AI Tools</button><button data-msgo="datingSection"><svg viewBox="0 0 24 24"><path d="M20.8 8.6c0 5.4-8.8 11-8.8 11s-8.8-5.6-8.8-11A4.6 4.6 0 0 1 12 6.2a4.6 4.6 0 0 1 8.8 2.4Z"/></svg>Dating Guide</button><button data-msgo="settingsSection"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.6V20a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1A1.7 1.7 0 0 0 8 15a1.7 1.7 0 0 0-1.6-1H6v-2.6h.4A1.7 1.7 0 0 0 8 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2H15V5a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v2.6H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>Settings</button>';
     document.body.appendChild(quick);
     menu.addEventListener("click",()=>quick.classList.toggle("open"));
     quick.addEventListener("click",e=>{const b=e.target.closest("[data-msgo]");if(!b)return;quick.classList.remove("open");window.shell.go(b.dataset.msgo);});
@@ -449,11 +449,7 @@ html.mx-light body{background:#f7f8fc!important}
     ["profileSection", "🙂", "You", "linear-gradient(160deg,#1877f2,#6aa8ff)"],
     ["peopleSection", "👥", "Meet people", "linear-gradient(160deg,#1877f2,#f45b9a)"],
     ["notifSection", "🔔", "Notifications", "linear-gradient(160deg,#1877f2,#8a5cf6)"],
-    ["datingSection", "❤️", "Dating Guide", "linear-gradient(160deg,#ff5f6d,#ffc371)"],
     ["jobsSection", "💼", "Job Updates", "linear-gradient(160deg,#11998e,#38ef7d)"],
-    ["toolsHubSection", "✨", "AI Tools", "linear-gradient(160deg,#3a1c71,#6a82fb)"],
-    ["shopSection", "🎁", "Gifts", "linear-gradient(160deg,#f7971e,#ffb347)"],
-    ["librarySection", "📚", "Library", "linear-gradient(160deg,#0f9b8e,#4facfe)"],
   ];
   window.shell.homeRenderer = (el, ctx) => {
     credits = ctx && ctx.credits;
