@@ -240,13 +240,13 @@ html.mx-light body{background:#f7f8fc!important}
 @media(max-width:899px){#studio #homeSection .ms-home-aside{margin-top:2px}}
 @media(max-width:420px){#studio #homeSection .ms-home-layout{gap:10px}#studio #homeSection .ms-home-aside .ms-picks-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 `;
-  st.textContent += `\n#msQuickMenu button{display:flex;align-items:center;gap:12px}\n#msQuickMenu button svg{width:22px;height:22px;flex:0 0 22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:#1877f2}\n`;
+  st.textContent += `\n#msMenuButton svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}\n#msQuickMenu button{display:flex;align-items:center;gap:12px}\n#msQuickMenu button svg{width:22px;height:22px;flex:0 0 22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:#1877f2}\n`;
   document.head.appendChild(st);
 
   // Upgrade the existing header in place; keep the app shell and its auth hooks.
   const topbar=q(".topbar");
   if(topbar&&!q("#msMenuButton")){
-    const menu=document.createElement("button");menu.id="msMenuButton";menu.className="ms-top-menu";menu.type="button";menu.setAttribute("aria-label","Open navigation menu");menu.textContent="☰";
+    const menu=document.createElement("button");menu.id="msMenuButton";menu.className="ms-top-menu";menu.type="button";menu.setAttribute("aria-label","Open navigation menu");menu.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
     const brand=topbar.querySelector(".brand");if(brand)topbar.insertBefore(menu,brand);
     const actions=topbar.querySelector(".top-actions");
     if(actions&&!q("#msTopAvatar")){const avatar=document.createElement("button");avatar.id="msTopAvatar";avatar.className="ms-top-avatar";avatar.type="button";avatar.setAttribute("aria-label","Open your profile");avatar.textContent="M";actions.appendChild(avatar);avatar.addEventListener("click",()=>window.shell.go("profileSection"));}
