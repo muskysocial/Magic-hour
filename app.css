@@ -146,3 +146,8 @@ body{font-size:14px}
 .upload-new-button{display:inline-flex!important;align-items:center;gap:6px;padding:8px 11px!important;border:1px solid #4e3b8e!important;border-radius:9px!important;background:#21164a!important;color:#d8c9ff!important;font-size:11px!important;font-weight:800!important}
 .swap-upload-card .swap-preview{margin-bottom:10px}
 @media(max-width:640px){.recent-thumb-wrap,.recent-thumb{flex-basis:68px;width:68px}.recent-thumb{height:74px}.recent-strip{gap:9px}.recent-heading{margin-top:12px}}
+
+
+/* Background Remover result preview */
+.transparent-preview{background-color:#f5f7fa;background-image:linear-gradient(45deg,#d9dee7 25%,transparent 25%),linear-gradient(-45deg,#d9dee7 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9dee7 75%),linear-gradient(-45deg,transparent 75%,#d9dee7 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}
+.result-actions a.primary-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
