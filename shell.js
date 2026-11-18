@@ -545,7 +545,19 @@ function init() {
   backButton.addEventListener("click", goBack);
 
   function go(id, options = {}) {
-    if (!document.getElementById(id)) return;
+    if (!document.getElementById(id)) {
+      // Feature panes are registered by modules after sign-in. Queue an early tap
+      // instead of silently dropping navigation while those modules initialize.
+      const pending = new MutationObserver(() => {
+        if (document.getElementById(id)) {
+          pending.disconnect();
+          go(id, options);
+        }
+      });
+      pending.observe(studio, { childList: true, subtree: true });
+      setTimeout(() => pending.disconnect(), 12000);
+      return;
+    }
     if (currentPaneId && currentPaneId !== id) {
       if (!options.fromBack && id !== "homeSection") {
         navigationStack.push(currentPaneId);
