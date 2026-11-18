@@ -107,6 +107,10 @@ function renderHome(){return `
 <section><div class="section-head"><div><h2>${iconSvg("sparkles",15)} &nbsp;Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ${iconSvg("arrow",13)}</button></div><div class="tools-grid">${tools.map(toolCard).join("")}</div></section>
 <section class="more-section"><div class="section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button class="text-btn" data-page="All tools">View all ${iconSvg("arrow",13)}</button></div><div class="more-grid">${moreTools.slice(0,7).map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${iconSvg(i,23)}</span><b>${n}</b></button>`).join("")}</div></section>
 <section class="pro-banner"><div class="crown">${iconSvg("crown",32)}</div><div class="pro-copy"><b>Upgrade to Pro</b><p>Get more credits, unlock premium tools and enjoy priority processing.</p></div><button class="pro-button" data-modal="pro">Go Pro ${iconSvg("arrow",13)}</button></section>`;}
+function recentOptions(selectedId=""){
+ const images=userAssets.filter(asset=>asset.mime_type?.startsWith("image/")&&asset.storage_path).slice(0,30);
+ return `<option value="">Choose a recent image…</option>`+images.map(asset=>`<option value="${esc(asset.id)}" ${asset.id===selectedId?"selected":""}>${esc(asset.file_name||"Recent image")}</option>`).join("");
+}
 function renderTool(){const t=toolById(activeTool);if(activeTool==="headswap")return `
 <div class="section-head"><div><h1 class="page-title">Image HeadSwap</h1><p class="page-sub">Swap a face into another photo with the BFS AI engine.</p></div><button class="back-btn" data-action="back">← Back</button></div>
 <div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("scan-face",27)}</div><div><h2>AI Face Swap</h2><p>Upload a reference face and the photo you want to edit.</p></div></div>
