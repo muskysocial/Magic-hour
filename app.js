@@ -3,7 +3,8 @@ const SB_URL="https://jnsbttwyiwcqhuhveikq.supabase.co";
 const SB_KEY="sb_publishable_LB_HC5TVIdKf7FX3c0q8Hg__81wa5F2";
 const sb=createClient(SB_URL,SB_KEY);
 const $=s=>document.querySelector(s);
-const app=$("#app"), auth=$("#auth");\nlet root=null;
+const app=$("#app"), auth=$("#auth");
+let root=null;
 let session=null,profile=null,active="home";
 const icons={
 profile:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
