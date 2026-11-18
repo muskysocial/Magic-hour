@@ -113,7 +113,16 @@ function recentThumbs(kind,selectedId=""){
  if(!images.length)return '<p class="recent-empty">Your recently used images will appear here.</p>';
  return `<div class="recent-strip" aria-label="Recently used images">${images.map(asset=>`<div class="recent-thumb-wrap"><button type="button" class="recent-thumb ${asset.id===selectedId?"selected":""}" data-recent-${kind}="${esc(asset.id)}" aria-label="Use ${esc(asset.file_name||"recent image")}" aria-pressed="${asset.id===selectedId}"><img src="${esc(asset.signedUrl)}" alt="${esc(asset.file_name||"Recent image")}" loading="lazy">${asset.id===selectedId?'<span class="recent-check">✓</span>':""}</button><button type="button" class="recent-dismiss" data-dismiss-recent="${esc(asset.id)}" aria-label="Hide from recent images">×</button></div>`).join("")}</div>`;
 }
-function renderTool(){const t=toolById(activeTool);if(activeTool==="headswap")return `
+function renderTool(){const t=toolById(activeTool);if(activeTool==="background-remover")return `
+<div class="section-head"><div><h1 class="page-title">Background Remover</h1><p class="page-sub">Remove image backgrounds in seconds and save the transparent PNG to your Library.</p></div><button class="back-btn" data-action="back">← Back</button></div>
+<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("scissors",27)}</div><div><h2>AI Background Removal</h2><p>Powered by remove.bg</p></div></div>
+<div class="notice">Upload a JPG, PNG or WebP image up to 12 MB. Your original and transparent result are stored in your private Supabase Library.</div>
+<div class="upload-zone"><div style="font-size:34px">${iconSvg("upload",30)}</div><h3>Choose an image</h3><p>${selectedAssetFile?esc(selectedAssetFile.name):"Select a photo to remove its background."}</p><label for="bg-upload">Browse images</label><input id="bg-upload" type="file" accept="image/jpeg,image/png,image/webp"></div>
+<div id="file-status" class="page-sub">${esc(workspaceNotice||"Choose an image to get started.")}</div>
+<button class="primary-btn" data-action="run-background" ${workspaceBusy||!selectedAssetFile?"disabled":""}>${workspaceBusy?"Removing background…":"Remove background"}</button>
+${workspaceResultUrl?`<div class="swap-result"><h3>Transparent result</h3><img class="result-image transparent-preview" src="${esc(workspaceResultUrl)}" alt="Image with background removed"><div class="result-actions"><a class="primary-btn" href="${esc(workspaceResultUrl)}" download="background-removed.png">↓ Download PNG</a></div></div>`:""}
+</div>`;
+if(activeTool==="headswap")return `
 <div class="section-head"><div><h1 class="page-title">Image HeadSwap</h1><p class="page-sub">Swap a face into another photo with the BFS AI engine.</p></div><button class="back-btn" data-action="back">← Back</button></div>
 <div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("scan-face",27)}</div><div><h2>AI Face Swap</h2><p>Upload a reference face and the photo you want to edit.</p></div></div>
 <div class="notice">Your images and generated result are stored in your private Supabase library. Use photos you own or have permission to edit.</div>
@@ -202,7 +211,50 @@ if(b.dataset.recentFace||b.dataset.recentTarget){const assetId=b.dataset.recentF
 }
 if(b.dataset.deleteAsset){const asset=userAssets.find(a=>a.id===b.dataset.deleteAsset);if(!asset)return;if(!confirm(`Delete "${asset.file_name}" from your history and private library? This cannot be undone.`))return;b.disabled=true;b.textContent="Deleting…";try{const {error:storageError}=await supabase.storage.from("magic-hour-assets").remove([asset.storage_path]);if(storageError)throw storageError;const {error:rowError}=await supabase.from("mh_assets").delete().eq("id",asset.id).eq("user_id",currentUser.id);if(rowError)throw rowError;if(selectedReferenceAssetId===asset.id){selectedReferenceAssetId="";referencePreviewUrl="";}if(selectedTargetAssetId===asset.id){selectedTargetAssetId="";targetPreviewUrl="";}await loadAccountData();}catch(error){alert("Could not delete this image: "+(error?.message||String(error)));b.disabled=false;b.textContent="Delete";}return;}
 if(b.dataset.preview){const url=b.dataset.preview;const viewer=document.createElement("div");viewer.className="image-lightbox";viewer.innerHTML='<button class="lightbox-close" aria-label="Close">×</button><img alt="Preview">';viewer.querySelector("img").src=url;viewer.addEventListener("click",event=>{if(event.target===viewer||event.target.closest(".lightbox-close"))viewer.remove();});document.body.appendChild(viewer);return;}
-if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";render();return;}if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="run-headswap"){
+if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";render();return;}if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="run-background"){
+ if(!selectedAssetFile){workspaceNotice="Choose an image first.";render();return;}
+ const allowed=["image/jpeg","image/png","image/webp"];
+ if(!allowed.includes(selectedAssetFile.type)){workspaceNotice="Use a JPG, PNG or WebP image.";render();return;}
+ if(selectedAssetFile.size>12*1024*1024){workspaceNotice="This image is larger than 12 MB. Please choose a smaller image.";render();return;}
+ workspaceBusy=true;workspaceResultUrl="";workspaceNotice="Uploading your image securely…";render();
+ let uploadedPath="";
+ try{
+  let projectId=currentProjectId;
+  if(!projectId){
+   const {data:project,error:projectError}=await supabase.from("mh_projects").insert({user_id:currentUser.id,title:"Background Removal "+new Date().toLocaleString(),tool_id:"background-remover",status:"processing",metadata:{provider:"remove.bg"}}).select("id").single();
+   if(projectError)throw projectError;
+   projectId=project.id;currentProjectId=projectId;
+  }else{
+   const {error:projectError}=await supabase.from("mh_projects").update({status:"processing",updated_at:new Date().toISOString()}).eq("id",projectId).eq("user_id",currentUser.id);
+   if(projectError)throw projectError;
+  }
+  const safeName=selectedAssetFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+  uploadedPath=currentUser.id+"/"+projectId+"/"+Date.now()+"-original-"+safeName;
+  const {error:uploadError}=await supabase.storage.from("magic-hour-assets").upload(uploadedPath,selectedAssetFile,{contentType:selectedAssetFile.type,upsert:false});
+  if(uploadError)throw uploadError;
+  const {error:assetError}=await supabase.from("mh_assets").insert({user_id:currentUser.id,project_id:projectId,storage_path:uploadedPath,file_name:selectedAssetFile.name,mime_type:selectedAssetFile.type,size_bytes:selectedAssetFile.size});
+  if(assetError){await supabase.storage.from("magic-hour-assets").remove([uploadedPath]);throw assetError;}
+  workspaceNotice="Removing the background with remove.bg…";render();
+  const {data,error}=await supabase.functions.invoke("remove-background",{body:{storagePath:uploadedPath,projectId}});
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||"The background-removal service did not return a result.");
+  workspaceResultUrl=data.signedUrl||"";
+  if(!workspaceResultUrl&&data.asset?.storage_path){
+   const {data:signed,error:signedError}=await supabase.storage.from("magic-hour-assets").createSignedUrl(data.asset.storage_path,3600);
+   if(signedError)throw signedError;
+   workspaceResultUrl=signed?.signedUrl||"";
+  }
+  if(!workspaceResultUrl)throw new Error("The result was saved but could not be opened. Check your Library.");
+  selectedAssetFile=null;selectedFile=null;workspaceNotice="Background removed! Your transparent PNG is saved in your private Library.";
+  await loadAccountData();
+ }catch(error){
+  workspaceNotice="Background removal failed: "+(error?.message||String(error));
+  if(currentProjectId)await supabase.from("mh_projects").update({status:"failed",updated_at:new Date().toISOString()}).eq("id",currentProjectId).eq("user_id",currentUser.id);
+  await loadAccountData();
+ }finally{workspaceBusy=false;render();}
+ return;
+}
+if(b.dataset.action==="run-headswap"){
  if((!selectedReferenceFace&&!selectedReferenceAssetId)||(!selectedTargetImage&&!selectedTargetAssetId)){workspaceNotice="Choose a face image and a body image, either by uploading or selecting recent images.";render();return;}
  if(!currentUser){workspaceNotice="Please sign in again.";render();return;}
  const allowed=["image/jpeg","image/png","image/webp"];
@@ -276,7 +328,7 @@ if(b.dataset.action==="prepare"){
  return;
 }});
 app.addEventListener("submit",async e=>{if(e.target.id==="auth-form"){e.preventDefault();const fd=new FormData(e.target);const submit=e.target.querySelector("button[type=submit]");submit.disabled=true;submit.textContent="Please wait…";let result;if(authMode==="phone"){pendingPhone=String(fd.get("phone")||"").trim();result=await supabase.auth.signInWithOtp({phone:pendingPhone});if(!result.error){authMode="phone-verify";authNotice="A verification code was requested. Delivery depends on your configured SMS/WhatsApp provider.";renderAuth();return;}}else if(authMode==="phone-verify"){result=await supabase.auth.verifyOtp({phone:pendingPhone,token:String(fd.get("otp")||"").trim(),type:"sms"});}else{const email=String(fd.get("email")||"").trim();const password=String(fd.get("password")||"");if(authMode==="signup"){result=await supabase.auth.signUp({email,password,options:{emailRedirectTo:"https://magichour-black.vercel.app",data:{full_name:String(fd.get("name")||"").trim()}}});}else{result=await supabase.auth.signInWithPassword({email,password});}}submit.disabled=false;if(result.error){authNotice=result.error.message;renderAuth();}else if(authMode==="signup"&&!result.data.session){authNotice="Account created. Check your inbox and spam folder for the confirmation email.";renderAuth();}else if(authMode==="phone"||authMode==="phone-verify"){currentUser=result.data.user||null;authNotice="";page="Home";render();}else{currentUser=result.data.user||null;authNotice="";page="Home";render();}return;}});
-app.addEventListener("change",e=>{if(e.target.id==="reference-face-upload"&&e.target.files?.[0]){selectedReferenceFace=e.target.files[0];selectedReferenceAssetId="";if(referencePreviewUrl)URL.revokeObjectURL(referencePreviewUrl);referencePreviewUrl=URL.createObjectURL(selectedReferenceFace);workspaceNotice="Face image selected. Now choose the body image.";render();return;}if(e.target.id==="target-image-upload"&&e.target.files?.[0]){selectedTargetImage=e.target.files[0];selectedTargetAssetId="";if(targetPreviewUrl)URL.revokeObjectURL(targetPreviewUrl);targetPreviewUrl=URL.createObjectURL(selectedTargetImage);workspaceNotice="Body image selected. Ready when both images are selected.";render();return;}if(e.target.id==="asset-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=e.target.files[0].name;const status=document.querySelector("#file-status");if(status)status.textContent="Selected: "+selectedFile;}});
+app.addEventListener("change",e=>{if(e.target.id==="reference-face-upload"&&e.target.files?.[0]){selectedReferenceFace=e.target.files[0];selectedReferenceAssetId="";if(referencePreviewUrl)URL.revokeObjectURL(referencePreviewUrl);referencePreviewUrl=URL.createObjectURL(selectedReferenceFace);workspaceNotice="Face image selected. Now choose the body image.";render();return;}if(e.target.id==="target-image-upload"&&e.target.files?.[0]){selectedTargetImage=e.target.files[0];selectedTargetAssetId="";if(targetPreviewUrl)URL.revokeObjectURL(targetPreviewUrl);targetPreviewUrl=URL.createObjectURL(selectedTargetImage);workspaceNotice="Body image selected. Ready when both images are selected.";render();return;}if(e.target.id==="bg-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=selectedAssetFile.name;workspaceResultUrl="";workspaceNotice="Image selected. Ready to remove its background.";render();return;}if(e.target.id==="asset-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=e.target.files[0].name;const status=document.querySelector("#file-status");if(status)status.textContent="Selected: "+selectedFile;}});
 app.addEventListener("submit",e=>{if(e.target.id==="chat-form"){e.preventDefault();const input=e.target.querySelector("input");sendMessage(input.value);}});
 // Progressive Web App setup and Android install prompt
 let deferredInstallPrompt=null;
