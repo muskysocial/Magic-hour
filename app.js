@@ -118,10 +118,10 @@ function recentThumbs(kind,selectedId=""){
 function renderTool(){const t=toolById(activeTool);if(activeTool==="ai-video"||activeTool==="image-to-video"){const heading=activeTool==="image-to-video"?"Image to Video":"AI Video Animate";return `
 <div class="section-head"><div><h1 class="page-title">${heading}</h1><p class="page-sub">Connect the PiAPI video engine to MuskySocials.</p></div><button class="back-btn" data-action="back">← Back</button></div>
 <div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("video",27)}</div><div><h2>PiAPI video engine</h2><p>Secure provider connection through Supabase</p></div></div>
-<div class="notice">Your PiAPI secret stays on the server. This check validates the key and the selected Kling image-to-video route without generating a video or spending credits.</div>
+<div class="notice">Your PiAPI secret stays on the server. This sends an intentionally empty test request to verify API authentication; it does not create a video or spend credits.</div>
 <button class="primary-btn" data-action="check-piapi-access" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Checking PiAPI…":"Check PiAPI connection"}</button>
 <div id="file-status" class="page-sub">${esc(workspaceNotice||"Run the connection check to verify PiAPI access.")}</div>
-${piapiDiagnosticResult?`<div class="account-panel"><b>${piapiDiagnosticResult.connected?"PiAPI connection verified":"PiAPI connection needs attention"}</b><p>${esc(piapiDiagnosticResult.error||piapiDiagnosticResult.message||"")}</p>${piapiDiagnosticResult.connected?`<small>Model route: ${esc(piapiDiagnosticResult.model||"")} · ${esc(piapiDiagnosticResult.checkedAt||"")}</small>`:""}</div>`:""}
+${piapiDiagnosticResult?`<div class="account-panel"><b>${piapiDiagnosticResult.connected?"PiAPI connection verified":"PiAPI connection needs attention"}</b><p>${esc(piapiDiagnosticResult.error||piapiDiagnosticResult.message||"")}</p>${piapiDiagnosticResult.connected?`<small>Authentication test passed · HTTP ${esc(String(piapiDiagnosticResult.validationStatus??""))} · ${esc(piapiDiagnosticResult.checkedAt||"")}</small>`:""}</div>`:""}
 <p class="page-sub">Next: connect image upload, selectable duration, daily credits, premium limits and saving generated videos to your Library.</p>
 </div>`;}
 if(activeTool==="background-remover")return `
