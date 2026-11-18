@@ -35,7 +35,7 @@ let walletTransactions = [];
 let workspaceBusy = false;
 let workspaceNotice = "";
 let videoDiagnosticResult = null;
-let falDiagnosticResult = null;
+let piapiDiagnosticResult = null;
 let currentProjectId = null;
 let dismissedRecentAssetIds = new Set();
 
@@ -116,12 +116,12 @@ function recentThumbs(kind,selectedId=""){
  return `<div class="recent-strip" aria-label="Recently used images">${images.map(asset=>`<div class="recent-thumb-wrap"><button type="button" class="recent-thumb ${asset.id===selectedId?"selected":""}" data-recent-${kind}="${esc(asset.id)}" aria-label="Use ${esc(asset.file_name||"recent image")}" aria-pressed="${asset.id===selectedId}"><img src="${esc(asset.signedUrl)}" alt="${esc(asset.file_name||"Recent image")}" loading="lazy">${asset.id===selectedId?'<span class="recent-check">✓</span>':""}</button><button type="button" class="recent-dismiss" data-dismiss-recent="${esc(asset.id)}" aria-label="Hide from recent images">×</button></div>`).join("")}</div>`;
 }
 function renderTool(){const t=toolById(activeTool);if(activeTool==="ai-video"||activeTool==="image-to-video"){const heading=activeTool==="image-to-video"?"Image to Video":"AI Video Animate";return `
-<div class="section-head"><div><h1 class="page-title">${heading}</h1><p class="page-sub">Connect the Fal.ai video engine to MuskySocials.</p></div><button class="back-btn" data-action="back">← Back</button></div>
-<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("video",27)}</div><div><h2>Fal.ai video engine</h2><p>Secure provider connection through Supabase</p></div></div>
-<div class="notice">Your Fal.ai secret stays on the server. This check validates the key and the selected Kling image-to-video route without generating a video or spending credits.</div>
-<button class="primary-btn" data-action="check-fal-access" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Checking Fal.ai…":"Check Fal.ai connection"}</button>
-<div id="file-status" class="page-sub">${esc(workspaceNotice||"Run the connection check to verify Fal.ai access.")}</div>
-${falDiagnosticResult?`<div class="account-panel"><b>${falDiagnosticResult.connected?"Fal.ai connection verified":"Fal.ai connection needs attention"}</b><p>${esc(falDiagnosticResult.error||falDiagnosticResult.message||"")}</p>${falDiagnosticResult.connected?`<small>Model route: ${esc(falDiagnosticResult.model||"")} · ${esc(falDiagnosticResult.checkedAt||"")}</small>`:""}</div>`:""}
+<div class="section-head"><div><h1 class="page-title">${heading}</h1><p class="page-sub">Connect the PiAPI video engine to MuskySocials.</p></div><button class="back-btn" data-action="back">← Back</button></div>
+<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("video",27)}</div><div><h2>PiAPI video engine</h2><p>Secure provider connection through Supabase</p></div></div>
+<div class="notice">Your PiAPI secret stays on the server. This check validates the key and the selected Kling image-to-video route without generating a video or spending credits.</div>
+<button class="primary-btn" data-action="check-piapi-access" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Checking PiAPI…":"Check PiAPI connection"}</button>
+<div id="file-status" class="page-sub">${esc(workspaceNotice||"Run the connection check to verify PiAPI access.")}</div>
+${piapiDiagnosticResult?`<div class="account-panel"><b>${piapiDiagnosticResult.connected?"PiAPI connection verified":"PiAPI connection needs attention"}</b><p>${esc(piapiDiagnosticResult.error||piapiDiagnosticResult.message||"")}</p>${piapiDiagnosticResult.connected?`<small>Model route: ${esc(piapiDiagnosticResult.model||"")} · ${esc(piapiDiagnosticResult.checkedAt||"")}</small>`:""}</div>`:""}
 <p class="page-sub">Next: connect image upload, selectable duration, daily credits, premium limits and saving generated videos to your Library.</p>
 </div>`;}
 if(activeTool==="background-remover")return `
@@ -222,14 +222,14 @@ if(b.dataset.recentFace||b.dataset.recentTarget){const assetId=b.dataset.recentF
 }
 if(b.dataset.deleteAsset){const asset=userAssets.find(a=>a.id===b.dataset.deleteAsset);if(!asset)return;if(!confirm(`Delete "${asset.file_name}" from your history and private library? This cannot be undone.`))return;b.disabled=true;b.textContent="Deleting…";try{const {error:storageError}=await supabase.storage.from("magic-hour-assets").remove([asset.storage_path]);if(storageError)throw storageError;const {error:rowError}=await supabase.from("mh_assets").delete().eq("id",asset.id).eq("user_id",currentUser.id);if(rowError)throw rowError;if(selectedReferenceAssetId===asset.id){selectedReferenceAssetId="";referencePreviewUrl="";}if(selectedTargetAssetId===asset.id){selectedTargetAssetId="";targetPreviewUrl="";}await loadAccountData();}catch(error){alert("Could not delete this image: "+(error?.message||String(error)));b.disabled=false;b.textContent="Delete";}return;}
 if(b.dataset.preview){const url=b.dataset.preview;const viewer=document.createElement("div");viewer.className="image-lightbox";viewer.innerHTML='<button class="lightbox-close" aria-label="Close">×</button><img alt="Preview">';viewer.querySelector("img").src=url;viewer.addEventListener("click",event=>{if(event.target===viewer||event.target.closest(".lightbox-close"))viewer.remove();});document.body.appendChild(viewer);return;}
-if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";videoDiagnosticResult=null;falDiagnosticResult=null;render();return;}if(b.dataset.action==="check-fal-access"){
-  workspaceBusy=true;workspaceNotice="Checking Fal.ai securely…";falDiagnosticResult=null;render();
+if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";videoDiagnosticResult=null;piapiDiagnosticResult=null;render();return;}if(b.dataset.action==="check-piapi-access"){
+  workspaceBusy=true;workspaceNotice="Checking PiAPI securely…";piapiDiagnosticResult=null;render();
   try{
-   const {data,error}=await supabase.functions.invoke("fal-video-diagnostics",{body:{}});
+   const {data,error}=await supabase.functions.invoke("piapi-video-diagnostics",{body:{}});
    if(error)throw error;
-   falDiagnosticResult=data||{ok:false,connected:false,error:"Fal.ai returned an empty response."};
-   workspaceNotice=falDiagnosticResult.connected?"Fal.ai connection verified. No video was generated.":(falDiagnosticResult.error||"Fal.ai connection could not be verified.");
-  }catch(error){falDiagnosticResult={ok:false,connected:false,error:error?.message||String(error)};workspaceNotice="Fal.ai check failed: "+falDiagnosticResult.error;}
+   piapiDiagnosticResult=data||{ok:false,connected:false,error:"PiAPI returned an empty response."};
+   workspaceNotice=piapiDiagnosticResult.connected?"PiAPI connection verified. No video was generated.":(piapiDiagnosticResult.error||"PiAPI connection could not be verified.");
+  }catch(error){piapiDiagnosticResult={ok:false,connected:false,error:error?.message||String(error)};workspaceNotice="PiAPI check failed: "+piapiDiagnosticResult.error;}
   finally{workspaceBusy=false;render();}
   return;
  }
