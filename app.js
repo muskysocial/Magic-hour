@@ -36,6 +36,13 @@ let workspaceBusy = false;
 let workspaceNotice = "";
 let videoDiagnosticResult = null;
 let piapiDiagnosticResult = null;
+let dailyVideoCredits = 100;
+let selectedVideoFile = null;
+let videoPreviewUrl = "";
+let videoDurationSeconds = 5;
+let videoAspectRatio = "16:9";
+let activeVideoJobId = null;
+let videoPollingToken = 0;
 let currentProjectId = null;
 let dismissedRecentAssetIds = new Set();
 
@@ -115,14 +122,37 @@ function recentThumbs(kind,selectedId=""){
  if(!images.length)return '<p class="recent-empty">Your recently used images will appear here.</p>';
  return `<div class="recent-strip" aria-label="Recently used images">${images.map(asset=>`<div class="recent-thumb-wrap"><button type="button" class="recent-thumb ${asset.id===selectedId?"selected":""}" data-recent-${kind}="${esc(asset.id)}" aria-label="Use ${esc(asset.file_name||"recent image")}" aria-pressed="${asset.id===selectedId}"><img src="${esc(asset.signedUrl)}" alt="${esc(asset.file_name||"Recent image")}" loading="lazy">${asset.id===selectedId?'<span class="recent-check">✓</span>':""}</button><button type="button" class="recent-dismiss" data-dismiss-recent="${esc(asset.id)}" aria-label="Hide from recent images">×</button></div>`).join("")}</div>`;
 }
-function renderTool(){const t=toolById(activeTool);if(activeTool==="ai-video"||activeTool==="image-to-video"){const heading=activeTool==="image-to-video"?"Image to Video":"AI Video Animate";return `
-<div class="section-head"><div><h1 class="page-title">${heading}</h1><p class="page-sub">Connect the PiAPI video engine to MuskySocials.</p></div><button class="back-btn" data-action="back">← Back</button></div>
-<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("video",27)}</div><div><h2>PiAPI video engine</h2><p>Secure provider connection through Supabase</p></div></div>
-<div class="notice">Your PiAPI secret stays on the server. This sends an intentionally empty test request to verify API authentication; it does not create a video or spend credits.</div>
-<button class="primary-btn" data-action="check-piapi-access" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Checking PiAPI…":"Check PiAPI connection"}</button>
-<div id="file-status" class="page-sub">${esc(workspaceNotice||"Run the connection check to verify PiAPI access.")}</div>
-${piapiDiagnosticResult?`<div class="account-panel"><b>${piapiDiagnosticResult.connected?"PiAPI connection verified":"PiAPI connection needs attention"}</b><p>${esc(piapiDiagnosticResult.error||piapiDiagnosticResult.message||"")}</p>${piapiDiagnosticResult.connected?`<small>Authentication test passed · HTTP ${esc(String(piapiDiagnosticResult.validationStatus??""))} · ${esc(piapiDiagnosticResult.checkedAt||"")}</small>`:""}</div>`:""}
-<p class="page-sub">Next: connect image upload, selectable duration, daily credits, premium limits and saving generated videos to your Library.</p>
+async function pollPiapiVideo(jobId,token,attempt){
+ if(token!==videoPollingToken||!jobId)return;
+ if(attempt>90){workspaceNotice="Your video is taking longer than expected. You can return to AI Video and check again later.";workspaceBusy=false;render();return;}
+ try{
+  const {data,error}=await supabase.functions.invoke("piapi-video",{body:{action:"status",jobId}});
+  if(error)throw error;
+  if(data?.status==="completed"&&data.videoUrl){
+   workspaceResultUrl=data.videoUrl;activeVideoJobId=null;workspaceBusy=false;workspaceNotice="Video completed and saved to your private Library.";dailyVideoCredits=Number(data.creditsRemaining??dailyVideoCredits);await loadAccountData();render();return;
+  }
+  if(data?.status==="failed"||data?.ok===false){
+   activeVideoJobId=null;workspaceBusy=false;workspaceNotice=(data?.error||"Video generation failed.")+(data?.creditsRefunded?" Your daily credits have been returned.":"");dailyVideoCredits=Number(data?.creditsRemaining??dailyVideoCredits);await loadAccountData();render();return;
+  }
+  workspaceBusy=true;workspaceNotice=data?.note||"PiAPI is generating your video…";render();
+  setTimeout(()=>pollPiapiVideo(jobId,token,attempt+1),8000);
+ }catch(error){
+  workspaceNotice="Checking generation status… "+(error?.message||"");render();
+  setTimeout(()=>pollPiapiVideo(jobId,token,attempt+1),12000);
+ }
+}
+function renderTool(){const t=toolById(activeTool);if(activeTool==="ai-video"||activeTool==="image-to-video"){const heading=activeTool==="image-to-video"?"Image to Video":"AI Video Animate";const creditCost=videoDurationSeconds*10;return `
+<div class="section-head"><div><h1 class="page-title">${heading}</h1><p class="page-sub">Turn a still image into a moving video with PiAPI Kling.</p></div><button class="back-btn" data-action="back">← Back</button></div>
+<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("video",27)}</div><div><h2>PiAPI video studio</h2><p>Image-to-video generation · Private Library storage</p></div></div>
+<div class="video-credit-strip"><div><small>DAILY VIDEO CREDITS</small><strong>${dailyVideoCredits} <span>/ 100</span></strong></div><div><small>THIS GENERATION</small><strong>${creditCost} credits</strong></div></div>
+<div class="notice">You receive 100 video credits each day. Current free access supports up to 10 seconds. Generation costs 10 credits per second. Credits are charged securely and returned if PiAPI rejects or fails the task.</div>
+<div class="upload-zone video-upload-zone"><div class="video-source-preview">${videoPreviewUrl?`<img src="${esc(videoPreviewUrl)}" alt="Selected source image">`:`<span>${iconSvg("image",32)}</span>`}</div><h3>Choose your starting image</h3><p>${selectedVideoFile?esc(selectedVideoFile.name):"Upload a JPG, PNG or WebP image to animate."}</p><label for="video-image-upload">Browse images</label><input id="video-image-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden></div>
+<label class="video-field-label" for="video-prompt">Describe the movement</label><textarea id="video-prompt" class="video-prompt" maxlength="1200" placeholder="Example: The person smiles naturally, turns slightly toward the camera, and their hair moves gently in the breeze."></textarea>
+<div class="video-options"><label><span>Video duration</span><select id="video-duration"><option value="5" ${videoDurationSeconds===5?"selected":""}>5 seconds · 50 credits</option><option value="10" ${videoDurationSeconds===10?"selected":""}>10 seconds · 100 credits</option></select></label><label><span>Aspect ratio</span><select id="video-ratio"><option value="16:9" ${videoAspectRatio==="16:9"?"selected":""}>Landscape · 16:9</option><option value="9:16" ${videoAspectRatio==="9:16"?"selected":""}>Portrait · 9:16</option><option value="1:1" ${videoAspectRatio==="1:1"?"selected":""}>Square · 1:1</option></select></label></div>
+<div id="file-status" class="page-sub">${esc(workspaceNotice||"Upload an image and describe how it should move.")}</div>
+<button class="primary-btn" data-action="run-ai-video" ${workspaceBusy||!selectedVideoFile||dailyVideoCredits<creditCost?"disabled":""}>${workspaceBusy?"Creating your video…":"Generate video · "+creditCost+" credits"}</button>
+${dailyVideoCredits<creditCost?'<p class="page-sub">Not enough daily credits for this duration. Your allowance refreshes daily.</p>':""}
+${workspaceResultUrl?`<div class="swap-result"><h3>Your generated video</h3><video class="generated-video" src="${esc(workspaceResultUrl)}" controls playsinline></video><div class="result-actions"><a class="primary-btn" href="${esc(workspaceResultUrl)}" download="muskysocials-ai-video.mp4">↓ Download video</a><button class="secondary-btn" data-page="Library">Open Library</button></div></div>`:""}
 </div>`;}
 if(activeTool==="background-remover")return `
 <div class="section-head"><div><h1 class="page-title">Background Remover</h1><p class="page-sub">Remove image backgrounds in seconds and save the transparent PNG to your Library.</p></div><button class="back-btn" data-action="back">← Back</button></div>
@@ -158,7 +188,7 @@ function renderGeneric(){
  const map={"Library":["library","Your Library","Your private uploaded files."],"Projects":["grid","Your Projects","Your saved creative projects."],"Settings":["settings","Settings","Manage your profile and account."],"All tools":["sparkles","Explore all tools","Choose a creative workspace."],"Create":["plus","Create something new","Choose a tool to start a project."],"Notifications":["bell","Notifications","You're all caught up."]};
  const [icon,title,desc]=map[page]||map["All tools"];
  const projectsHtml=userProjects.length?userProjects.map(p=>`<button class="account-panel project-row" data-project="${p.id}"><b>${esc(p.title)}</b><p>${esc(p.tool_id)} · ${esc(p.status)} · ${new Date(p.created_at).toLocaleDateString()}</p></button>`).join(""):'<div class="notice">No projects yet. Open a tool and upload a file to create your first project.</div>';
- const assetsHtml=userAssets.length?`<div class="history-grid">${userAssets.map(a=>`<div class="history-item"><button class="history-image" data-preview="${esc(a.signedUrl||"")}" aria-label="View ${esc(a.file_name)}">${a.mime_type?.startsWith("image/")&&a.signedUrl?`<img src="${esc(a.signedUrl)}" alt="${esc(a.file_name)}" loading="lazy">`:`<span class="history-file">${iconSvg("folder",24)}</span>`}</button><span class="history-name">${esc(a.file_name)}</span><small>${new Date(a.created_at).toLocaleDateString()}</small><button class="history-delete" data-delete-asset="${a.id}" aria-label="Delete ${esc(a.file_name)}">Delete</button></div>`).join("")}</div>`:'<div class="notice">Your uploaded files will appear here.</div>';
+ const assetsHtml=userAssets.length?`<div class="history-grid">${userAssets.map(a=>`<div class="history-item"><button class="history-image" data-preview="${esc(a.signedUrl||"")}" aria-label="View ${esc(a.file_name)}">${(a.mime_type?.startsWith("image/")||a.mime_type?.startsWith("video/"))&&a.signedUrl?`<img src="${esc(a.signedUrl)}" alt="${esc(a.file_name)}" loading="lazy">`:`<span class="history-file">${iconSvg("folder",24)}</span>`}</button><span class="history-name">${esc(a.file_name)}</span><small>${new Date(a.created_at).toLocaleDateString()}</small><button class="history-delete" data-delete-asset="${a.id}" aria-label="Delete ${esc(a.file_name)}">Delete</button></div>`).join("")}</div>`:'<div class="notice">Your uploaded files will appear here.</div>';
  return `<div class="empty-panel"><div class="empty-icon">${iconSvg(icon,34)}</div><h1 class="page-title">${title}</h1><p class="page-sub">${desc}</p>
  ${page==="Settings"?`<div class="account-panel"><b>Signed in account</b><p>${esc(currentUser?.email||"")}</p><p>Wallet balance: ${walletBalance.toLocaleString()} coins</p><button class="secondary-btn" data-action="signout">Sign out</button></div>`:""}
  ${page==="Projects"?`<div class="account-list">${projectsHtml}</div>`:""}
@@ -169,17 +199,20 @@ function renderGeneric(){
 async function loadAccountData(){
   if(!currentUser)return;
   const uid=currentUser.id;
-  const [wallet,projects,assets,transactions]=await Promise.all([
+  const [wallet,projects,assets,transactions,videoCredits]=await Promise.all([
     supabase.from("mh_wallets").select("balance").eq("user_id",uid).maybeSingle(),
     supabase.from("mh_projects").select("id,title,tool_id,status,created_at,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(100),
     supabase.from("mh_assets").select("id,project_id,storage_path,file_name,mime_type,size_bytes,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(100),
-    supabase.from("mh_wallet_transactions").select("id,amount,transaction_type,description,reference,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(50)
+    supabase.from("mh_wallet_transactions").select("id,amount,transaction_type,description,reference,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
+    supabase.from("mh_video_credit_balances").select("credit_date,credits_remaining").eq("user_id",uid).maybeSingle()
   ]);
   if(!wallet.error&&wallet.data)walletBalance=Number(wallet.data.balance)||0;
   else if(wallet.error)console.warn("Wallet load:",wallet.error.message);
   if(!projects.error)userProjects=projects.data||[];else console.warn("Projects load:",projects.error.message);
   if(!assets.error){userAssets=await Promise.all((assets.data||[]).map(async a=>{if(!a.mime_type?.startsWith("image/"))return a;const {data:signed}=await supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600);return {...a,signedUrl:signed?.signedUrl||""};}));}else console.warn("Assets load:",assets.error.message);
   if(!transactions.error)walletTransactions=transactions.data||[];else console.warn("Wallet history:",transactions.error.message);
+  const utcDay=new Date().toISOString().slice(0,10);
+  dailyVideoCredits=!videoCredits.error&&videoCredits.data?.credit_date===utcDay?Number(videoCredits.data.credits_remaining):100;
   if(currentUser)render();
 }
 function renderAuth(){const phoneMode=authMode==="phone"||authMode==="phone-verify";app.innerHTML=`<div class="auth-screen"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark"><svg class="brand-symbol" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 49V15l22 25 22-25v34" /></svg></span><span>magic hour<small>AI STUDIO</small></span></div><div class="eyebrow">YOUR CREATIVE SPACE STARTS HERE</div><h1>${authMode==="signup"?"Create your account":authMode==="phone-verify"?"Verify your phone":"Welcome back"}</h1><p class="auth-sub">${authMode==="signup"?"Join magic hour and keep your creative work in one place.":authMode==="phone-verify"?"Enter the one-time code sent to "+esc(pendingPhone):"Sign in to access your magic hour workspace."}</p>
@@ -222,7 +255,38 @@ if(b.dataset.recentFace||b.dataset.recentTarget){const assetId=b.dataset.recentF
 }
 if(b.dataset.deleteAsset){const asset=userAssets.find(a=>a.id===b.dataset.deleteAsset);if(!asset)return;if(!confirm(`Delete "${asset.file_name}" from your history and private library? This cannot be undone.`))return;b.disabled=true;b.textContent="Deleting…";try{const {error:storageError}=await supabase.storage.from("magic-hour-assets").remove([asset.storage_path]);if(storageError)throw storageError;const {error:rowError}=await supabase.from("mh_assets").delete().eq("id",asset.id).eq("user_id",currentUser.id);if(rowError)throw rowError;if(selectedReferenceAssetId===asset.id){selectedReferenceAssetId="";referencePreviewUrl="";}if(selectedTargetAssetId===asset.id){selectedTargetAssetId="";targetPreviewUrl="";}await loadAccountData();}catch(error){alert("Could not delete this image: "+(error?.message||String(error)));b.disabled=false;b.textContent="Delete";}return;}
 if(b.dataset.preview){const url=b.dataset.preview;const viewer=document.createElement("div");viewer.className="image-lightbox";viewer.innerHTML='<button class="lightbox-close" aria-label="Close">×</button><img alt="Preview">';viewer.querySelector("img").src=url;viewer.addEventListener("click",event=>{if(event.target===viewer||event.target.closest(".lightbox-close"))viewer.remove();});document.body.appendChild(viewer);return;}
-if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";videoDiagnosticResult=null;piapiDiagnosticResult=null;render();return;}if(b.dataset.action==="check-piapi-access"){
+if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";videoDiagnosticResult=null;piapiDiagnosticResult=null;render();return;}if(b.dataset.action==="run-ai-video"){
+ if(!selectedVideoFile){workspaceNotice="Choose an image first.";render();return;}
+ const prompt=document.querySelector("#video-prompt")?.value?.trim()||"";
+ if(!prompt){workspaceNotice="Describe the movement you want in your video.";render();return;}
+ if(!["image/jpeg","image/png","image/webp"].includes(selectedVideoFile.type)){workspaceNotice="Use a JPG, PNG or WebP image.";render();return;}
+ if(selectedVideoFile.size>12*1024*1024){workspaceNotice="This image is larger than 12 MB. Please choose a smaller image.";render();return;}
+ const cost=videoDurationSeconds*10;
+ if(dailyVideoCredits<cost){workspaceNotice="You do not have enough daily video credits for this duration.";render();return;}
+ workspaceBusy=true;workspaceResultUrl="";workspaceNotice="Creating your project and uploading the source image…";render();
+ try{
+  const {data:project,error:projectError}=await supabase.from("mh_projects").insert({user_id:currentUser.id,title:"AI Video "+new Date().toLocaleString(),tool_id:activeTool,status:"processing",metadata:{provider:"piapi",model:"kling-1.6"}}).select("id").single();
+  if(projectError)throw projectError;
+  currentProjectId=project.id;
+  const safeName=selectedVideoFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+  const path=currentUser.id+"/"+project.id+"/"+Date.now()+"-video-source-"+safeName;
+  const {error:uploadError}=await supabase.storage.from("magic-hour-assets").upload(path,selectedVideoFile,{contentType:selectedVideoFile.type,upsert:false});
+  if(uploadError)throw uploadError;
+  const {error:assetError}=await supabase.from("mh_assets").insert({user_id:currentUser.id,project_id:project.id,storage_path:path,file_name:selectedVideoFile.name,mime_type:selectedVideoFile.type,size_bytes:selectedVideoFile.size});
+  if(assetError){await supabase.storage.from("magic-hour-assets").remove([path]);throw assetError;}
+  workspaceNotice="Submitting your video request to PiAPI…";render();
+  const {data,error}=await supabase.functions.invoke("piapi-video",{body:{action:"start",storagePath:path,projectId:project.id,prompt,durationSeconds:videoDurationSeconds,aspectRatio:videoAspectRatio}});
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||"PiAPI could not start this video.");
+  dailyVideoCredits=Number(data.creditsRemaining??Math.max(0,dailyVideoCredits-cost));
+  selectedVideoFile=null;if(videoPreviewUrl)URL.revokeObjectURL(videoPreviewUrl);videoPreviewUrl="";
+  activeVideoJobId=data.jobId;videoPollingToken++;
+  workspaceNotice="Video submitted. PiAPI is generating it now…";workspaceBusy=false;await loadAccountData();render();
+  pollPiapiVideo(data.jobId,videoPollingToken,0);
+ }catch(error){workspaceNotice="Video request failed: "+(error?.message||String(error));workspaceBusy=false;await loadAccountData();render();}
+ return;
+}
+if(b.dataset.action==="check-piapi-access"){
   workspaceBusy=true;workspaceNotice="Checking PiAPI securely…";piapiDiagnosticResult=null;render();
   try{
    const {data,error}=await supabase.functions.invoke("piapi-video-diagnostics",{body:{}});
@@ -350,7 +414,7 @@ if(b.dataset.action==="prepare"){
  return;
 }});
 app.addEventListener("submit",async e=>{if(e.target.id==="auth-form"){e.preventDefault();const fd=new FormData(e.target);const submit=e.target.querySelector("button[type=submit]");submit.disabled=true;submit.textContent="Please wait…";let result;if(authMode==="phone"){pendingPhone=String(fd.get("phone")||"").trim();result=await supabase.auth.signInWithOtp({phone:pendingPhone});if(!result.error){authMode="phone-verify";authNotice="A verification code was requested. Delivery depends on your configured SMS/WhatsApp provider.";renderAuth();return;}}else if(authMode==="phone-verify"){result=await supabase.auth.verifyOtp({phone:pendingPhone,token:String(fd.get("otp")||"").trim(),type:"sms"});}else{const email=String(fd.get("email")||"").trim();const password=String(fd.get("password")||"");if(authMode==="signup"){result=await supabase.auth.signUp({email,password,options:{emailRedirectTo:"https://magichour-black.vercel.app",data:{full_name:String(fd.get("name")||"").trim()}}});}else{result=await supabase.auth.signInWithPassword({email,password});}}submit.disabled=false;if(result.error){authNotice=result.error.message;renderAuth();}else if(authMode==="signup"&&!result.data.session){authNotice="Account created. Check your inbox and spam folder for the confirmation email.";renderAuth();}else if(authMode==="phone"||authMode==="phone-verify"){currentUser=result.data.user||null;authNotice="";page="Home";render();}else{currentUser=result.data.user||null;authNotice="";page="Home";render();}return;}});
-app.addEventListener("change",e=>{if(e.target.id==="reference-face-upload"&&e.target.files?.[0]){selectedReferenceFace=e.target.files[0];selectedReferenceAssetId="";if(referencePreviewUrl)URL.revokeObjectURL(referencePreviewUrl);referencePreviewUrl=URL.createObjectURL(selectedReferenceFace);workspaceNotice="Face image selected. Now choose the body image.";render();return;}if(e.target.id==="target-image-upload"&&e.target.files?.[0]){selectedTargetImage=e.target.files[0];selectedTargetAssetId="";if(targetPreviewUrl)URL.revokeObjectURL(targetPreviewUrl);targetPreviewUrl=URL.createObjectURL(selectedTargetImage);workspaceNotice="Body image selected. Ready when both images are selected.";render();return;}if(e.target.id==="bg-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=selectedAssetFile.name;workspaceResultUrl="";workspaceNotice="Image selected. Ready to remove its background.";render();return;}if(e.target.id==="asset-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=e.target.files[0].name;const status=document.querySelector("#file-status");if(status)status.textContent="Selected: "+selectedFile;}});
+app.addEventListener("change",e=>{if(e.target.id==="video-image-upload"&&e.target.files?.[0]){selectedVideoFile=e.target.files[0];if(videoPreviewUrl)URL.revokeObjectURL(videoPreviewUrl);videoPreviewUrl=URL.createObjectURL(selectedVideoFile);workspaceNotice="Source image selected. Add a motion prompt to continue.";workspaceResultUrl="";render();return;}if(e.target.id==="video-duration"){videoDurationSeconds=Number(e.target.value)||5;render();return;}if(e.target.id==="video-ratio"){videoAspectRatio=e.target.value||"16:9";render();return;}if(e.target.id==="reference-face-upload"&&e.target.files?.[0]){selectedReferenceFace=e.target.files[0];selectedReferenceAssetId="";if(referencePreviewUrl)URL.revokeObjectURL(referencePreviewUrl);referencePreviewUrl=URL.createObjectURL(selectedReferenceFace);workspaceNotice="Face image selected. Now choose the body image.";render();return;}if(e.target.id==="target-image-upload"&&e.target.files?.[0]){selectedTargetImage=e.target.files[0];selectedTargetAssetId="";if(targetPreviewUrl)URL.revokeObjectURL(targetPreviewUrl);targetPreviewUrl=URL.createObjectURL(selectedTargetImage);workspaceNotice="Body image selected. Ready when both images are selected.";render();return;}if(e.target.id==="bg-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=selectedAssetFile.name;workspaceResultUrl="";workspaceNotice="Image selected. Ready to remove its background.";render();return;}if(e.target.id==="asset-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=e.target.files[0].name;const status=document.querySelector("#file-status");if(status)status.textContent="Selected: "+selectedFile;}});
 app.addEventListener("submit",e=>{if(e.target.id==="chat-form"){e.preventDefault();const input=e.target.querySelector("input");sendMessage(input.value);}});
 // Progressive Web App setup and Android install prompt
 let deferredInstallPrompt=null;
