@@ -77,3 +77,13 @@ body{font-size:14px}
 .project-row b,.asset-row b{font-size:13px;overflow-wrap:anywhere}
 .asset-row .secondary-btn{margin-top:9px}
 .primary-btn:disabled{opacity:.6;cursor:wait}
+
+
+/* BFS face-swap workspace */
+.swap-upload-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.swap-upload-grid .upload-zone{min-width:0}
+.swap-upload-grid .upload-zone label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.swap-result{margin-top:22px;padding:16px;border:1px solid var(--border,#263244);border-radius:16px;background:rgba(255,255,255,.025)}
+.swap-result img{display:block;width:100%;max-width:680px;max-height:620px;object-fit:contain;border-radius:12px;margin:12px auto}
+.swap-result a{display:inline-flex;margin-top:8px;color:var(--accent,#a78bfa);font-weight:700}
+@media(max-width:640px){.swap-upload-grid{grid-template-columns:1fr}}
