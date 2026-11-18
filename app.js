@@ -2,14 +2,14 @@ import { supabase } from "./api.js";
 
 const app = document.querySelector("#app");
 const tools = [
-  {id:"canva",name:"Canva Me",desc:"Design and create stunning graphics",icon:"🎨",accent:"canva",kind:"design"},
-  {id:"headswap",name:"Image HeadSwap",desc:"Swap faces in photos",icon:"🪄",accent:"head",kind:"image"},
-  {id:"videoswap",name:"Video Face Swap",desc:"Swap faces in videos",icon:"🎬",accent:"video",kind:"video"},
-  {id:"format",name:"Format",desc:"Convert, compress and resize files",icon:"📁",accent:"format",kind:"files"},
-  {id:"social",name:"All Social Media Platform",desc:"Manage and grow across social platforms",icon:"📱",accent:"social",kind:"social"}
+  {id:"canva",name:"Canva Me",desc:"Design and create stunning graphics",icon:"palette",accent:"canva",kind:"design"},
+  {id:"headswap",name:"Image HeadSwap",desc:"Swap faces in photos",icon:"scan-face",accent:"head",kind:"image"},
+  {id:"videoswap",name:"Video Face Swap",desc:"Swap faces in videos",icon:"clapperboard",accent:"video",kind:"video"},
+  {id:"format",name:"Format",desc:"Convert, compress and resize files",icon:"folder-symlink",accent:"format",kind:"files"},
+  {id:"social",name:"All Social Media Platform",desc:"Manage and grow across social platforms",icon:"smartphone",accent:"social",kind:"social"}
 ];
 const moreTools = [
-  ["AI Video","▶️"],["AI Image","🖼️"],["Background Remover","✂️"],["Photo Enhancer","✨"],["AI Avatar","👤"],["Voice Generator","🎙️"],["Music Generator","🎵"],["Image to Video","🎞️"],["AI Art Creator","🪄"],["Video Enhancer","📽️"],["Caption Writer","✍️"],["More tools","＋"]
+  ["AI Video","video"],["AI Image","image"],["Background Remover","scissors"],["Photo Enhancer","sparkles"],["AI Avatar","user-round"],["Voice Generator","mic"],["Music Generator","music"],["Image to Video","film"],["AI Art Creator","wand-sparkles"],["Video Enhancer","clapperboard"],["Caption Writer","pen-line"],["More tools","plus"]
 ];
 let page = "Home";
 let activeTool = null;
@@ -42,36 +42,73 @@ supabase.auth.onAuthStateChange((_event, session) => {
   render();
 });
 
+const iconSvg = (name,size=20) => {
+  const paths = {
+    palette:'<path d="M12 3a9 9 0 1 0 0 18h1.2a2 2 0 0 0 1.4-3.4 1.8 1.8 0 0 1 1.3-3.1H18a3 3 0 0 0 3-3c0-4.7-4-8.5-9-8.5Z"/><circle cx="7.5" cy="10" r="1"/><circle cx="10" cy="6.8" r="1"/><circle cx="15" cy="7.5" r="1"/>',
+    'scan-face':'<path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2M3 17v2a2 2 0 0 0 2 2h2m10 0h2a2 2 0 0 0 2-2v-2"/><circle cx="12" cy="11" r="3"/><path d="M8 17c1-2 7-2 8 0"/>',
+    clapperboard:'<path d="M4 4h16v16H4zM4 9h16M8 4l3 5m3-5 3 5"/>',
+    'folder-symlink':'<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3z"/><path d="M9 13h6m-3-3 3 3-3 3"/>',
+    smartphone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
+    video:'<rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-3v10l-4-3z"/>',
+    image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+    scissors:'<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="m8.1 8.1 12 12M14 6l-3 3m-3 3 12-6"/>',
+    sparkles:'<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Zm7 11 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z"/>',
+    'user-round':'<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+    mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0m-7 7v5m-4 0h8"/>',
+    music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18m10-18v18M3 8h4m-4 8h4m10-8h4m-4 8h4"/>',
+    'wand-sparkles':'<path d="m15 4 5 5M4 20 17 7M6 4v4m-2-2h4m9 10v4m-2-2h4"/>',
+    'pen-line':'<path d="m12 20 9-9-4-4-9 9-1 5zM14 6l4 4"/>',
+    plus:'<path d="M12 5v14m-7-7h14"/>',
+    home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/>',
+    library:'<path d="M4 4h16v16H4zM8 4v16m4-12h4m-4 4h4"/>',
+    grid:'<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
+    settings:'<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.6a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1 0 2Z"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12h4"/>',
+    user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    arrow:'<path d="M7 17 17 7M7 7h10v10"/>',
+    back:'<path d="m15 18-6-6 6-6M9 12h12"/>',
+    menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+    coin:'<circle cx="12" cy="12" r="9"/><path d="M15 8.5c-.7-1-1.7-1.5-3-1.5-1.7 0-3 1-3 2.3 0 3.4 6 1.4 6 4.5 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.5-3.1-1.5M12 5v14"/>',
+    crown:'<path d="m2 8 5 4 5-8 5 8 5-4-2 12H4z"/>',
+    folder:'<path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v11H3z"/>',
+    chat:'<path d="M21 11.5a8.5 8.5 0 0 1-12.7 7.4L3 20l1.1-4.3A8.5 8.5 0 1 1 21 11.5Z"/>',
+    wand:'<path d="m15 4 5 5M4 20 17 7m-8-4v4m-2-2h4"/>',
+    upload:'<path d="M12 16V4m-4 4 4-4 4 4M4 16v4h16v-4"/>',
+    check:'<path d="m5 12 4 4L19 6"/>'
+  };
+  return '<svg class="ui-icon" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[name]||paths.sparkles)+'</svg>';
+};
 const esc = (s) => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const toolById = id => tools.find(t=>t.id===id) || {id,name:id,desc:"AI workspace",icon:"✨",accent:"format"};
-function sidebarLink(label,icon){return `<button class="side-link ${page===label&&!activeTool?"active":""}" data-page="${label}"><span class="side-ico">${icon}</span>${label}</button>`;}
-function toolCard(t){return `<button class="tool-card ${t.accent}" data-tool="${t.id}"><div class="art"><span class="tool-icon">${t.icon}</span></div><h3>${t.name}</h3><p>${t.desc}</p><div class="card-foot"><span>Open workspace</span><span class="card-arrow">↗</span></div></button>`;}
+const toolById = id => tools.find(t=>t.id===id) || {id,name:id,desc:"AI workspace",icon:"sparkles",accent:"format"};
+function sidebarLink(label,icon){return `<button class="side-link ${page===label&&!activeTool?"active":""}" data-page="${label}"><span class="side-ico">${iconSvg(icon,18)}</span>${label}</button>`;}
+function toolCard(t){return `<button class="tool-card ${t.accent}" data-tool="${t.id}"><div class="art"><span class="tool-icon">${iconSvg(t.icon,32)}</span></div><h3>${t.name}</h3><p>${t.desc}</p><div class="card-foot"><span>Open workspace</span><span class="card-arrow">${iconSvg("arrow",15)}</span></div></button>`;}
 function renderHome(){return `
 <section class="hero">
   <div><div class="eyebrow">YOUR CREATIVE SPACE, ALL IN ONE PLACE</div><h1>What shall we <span>create</span> today?</h1><p>Design, transform and create with AI — all in one studio.</p></div>
   <div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="orb"></div><span class="spark one">✦</span><span class="spark two">✧</span></div>
 </section>
-<form class="chatbar" id="chat-form"><span aria-hidden="true">✧</span><input id="chat-input" placeholder="Ask magic hour anything..." aria-label="Ask magic hour anything"><button class="send" aria-label="Send message">↑</button></form>
+<form class="chatbar" id="chat-form"><span aria-hidden="true">${iconSvg("sparkles",18)}</span><input id="chat-input" placeholder="Ask magic hour anything..." aria-label="Ask magic hour anything"><button class="send" aria-label="Send message">↑</button></form>
 <section><div class="section-head"><div><h2>✦ &nbsp;Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ↗</button></div><div class="tools-grid">${tools.map(toolCard).join("")}</div></section>
-<section class="more-section"><div class="section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button class="text-btn" data-page="All tools">View all ↗</button></div><div class="more-grid">${moreTools.slice(0,7).map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${i}</span><b>${n}</b></button>`).join("")}</div></section>
-<section class="pro-banner"><div class="crown">♛</div><div class="pro-copy"><b>Upgrade to Pro</b><p>Get more credits, unlock premium tools and enjoy priority processing.</p></div><button class="pro-button" data-modal="pro">Go Pro ↗</button></section>`;}
+<section class="more-section"><div class="section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button class="text-btn" data-page="All tools">View all ↗</button></div><div class="more-grid">${moreTools.slice(0,7).map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${iconSvg(i,23)}</span><b>${n}</b></button>`).join("")}</div></section>
+<section class="pro-banner"><div class="crown">${iconSvg("crown",32)}</div><div class="pro-copy"><b>Upgrade to Pro</b><p>Get more credits, unlock premium tools and enjoy priority processing.</p></div><button class="pro-button" data-modal="pro">Go Pro ↗</button></section>`;}
 function renderTool(){const t=toolById(activeTool);return `
 <div class="section-head"><div><h1 class="page-title">${t.name}</h1><p class="page-sub">${t.desc}</p></div><button class="back-btn" data-action="back">← Back</button></div>
-<div class="workspace"><div class="workspace-head"><div class="tool-icon">${t.icon}</div><div><h2>${t.name}</h2><p>Your dedicated magic hour workspace</p></div></div>
+<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg(t.icon,27)}</div><div><h2>${t.name}</h2><p>Your dedicated magic hour workspace</p></div></div>
 <div class="notice">This workspace is ready for its connected AI service. Generation is not enabled until the matching API is configured.</div>
-<div class="upload-zone"><div style="font-size:34px">⬆</div><h3>Upload your files</h3><p>Choose a file from your device to prepare your project.</p><label for="asset-upload">Browse files</label><input id="asset-upload" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.png,.jpg,.jpeg,.mp4,.mov"></div>
+<div class="upload-zone"><div style="font-size:34px">${iconSvg("upload",30)}</div><h3>Upload your files</h3><p>Choose a file from your device to prepare your project.</p><label for="asset-upload">Browse files</label><input id="asset-upload" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.png,.jpg,.jpeg,.mp4,.mov"></div>
 <div id="file-status" class="page-sub">${selectedFile?esc(selectedFile):"No file selected yet."}</div>
 <button class="primary-btn" data-action="prepare">Prepare workspace</button>
 </div>`;}
-function renderChat(){return `<h1 class="page-title">New chat</h1><p class="page-sub">A creative assistant for your ideas.</p><div class="workspace"><div class="chat-log">${messages.length?messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text)}</div>`).join(""):'<div class="bubble">Hi! I’m your magic hour assistant. Tell me what you want to make, or choose one of the creative tools on Home.</div>'}</div><form class="chatbar" id="chat-form"><span>✧</span><input id="chat-input" placeholder="Message magic hour..." aria-label="Message magic hour"><button class="send" aria-label="Send message">↑</button></form><div class="notice">The chat interface is ready. Connect your preferred AI chat API to enable live AI responses.</div></div>`;}
+function renderChat(){return `<h1 class="page-title">New chat</h1><p class="page-sub">A creative assistant for your ideas.</p><div class="workspace"><div class="chat-log">${messages.length?messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text)}</div>`).join(""):'<div class="bubble">Hi! I’m your magic hour assistant. Tell me what you want to make, or choose one of the creative tools on Home.</div>'}</div><form class="chatbar" id="chat-form"><span>${iconSvg("sparkles",18)}</span><input id="chat-input" placeholder="Message magic hour..." aria-label="Message magic hour"><button class="send" aria-label="Send message">↑</button></form><div class="notice">The chat interface is ready. Connect your preferred AI chat API to enable live AI responses.</div></div>`;}
 function renderGeneric(){const map={
-"Library":["▣","Your Library","Your uploaded and generated files will appear here when storage is connected."],
-"Projects":["▦","Your Projects","Keep related chats, files and creative work together."],
-"Settings":["⚙","Settings","Manage your profile, preferences, notifications and account."],
-"All tools":["✦","Explore all tools","Choose from the creative workspaces available in magic hour."],
-"Create":["＋","Create something new","Choose a tool to start a new creative project."],
-"Notifications":["♧","Notifications","You're all caught up."]
-};const [icon,title,desc]=map[page]||map["All tools"];return `<div class="empty-panel"><div class="empty-icon">${icon}</div><h1 class="page-title">${title}</h1><p class="page-sub">${desc}</p>${page==="Settings"?`<div class="account-panel"><b>Signed in account</b><p>${esc(currentUser?.email||"")}</p><button class="secondary-btn" data-action="signout">Sign out</button></div>`:""}${page==="All tools"?`<div class="tools-grid">${tools.map(toolCard).join("")}</div><div class="more-grid" style="margin-top:14px">${moreTools.map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${i}</span><b>${n}</b></button>`).join("")}</div>`:`<button class="primary-btn" data-page="Home">Back to Home</button>`}</div>`;}
+"Library":["library","Your Library","Your uploaded and generated files will appear here when storage is connected."],
+"Projects":["grid","Your Projects","Keep related chats, files and creative work together."],
+"Settings":["settings","Settings","Manage your profile, preferences, notifications and account."],
+"All tools":["sparkles","Explore all tools","Choose from the creative workspaces available in magic hour."],
+"Create":["plus","Create something new","Choose a tool to start a new creative project."],
+"Notifications":["bell","Notifications","You're all caught up."]
+};const [icon,title,desc]=map[page]||map["All tools"];return `<div class="empty-panel"><div class="empty-icon">${iconSvg(icon,34)}</div><h1 class="page-title">${title}</h1><p class="page-sub">${desc}</p>${page==="Settings"?`<div class="account-panel"><b>Signed in account</b><p>${esc(currentUser?.email||"")}</p><button class="secondary-btn" data-action="signout">Sign out</button></div>`:""}${page==="All tools"?`<div class="tools-grid">${tools.map(toolCard).join("")}</div><div class="more-grid" style="margin-top:14px">${moreTools.map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${i}</span><b>${n}</b></button>`).join("")}</div>`:`<button class="primary-btn" data-page="Home">Back to Home</button>`}</div>`;}
 async function loadAccountData(){if(!currentUser)return;const {data,error}=await supabase.from("mh_wallets").select("balance").eq("user_id",currentUser.id).maybeSingle();if(!error&&data)walletBalance=Number(data.balance)||0;else if(error)console.warn("Wallet load:",error.message);if(currentUser)render();}
 function renderAuth(){const phoneMode=authMode==="phone"||authMode==="phone-verify";app.innerHTML=`<div class="auth-screen"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">m</span><span>magic hour<small>AI STUDIO</small></span></div><div class="eyebrow">YOUR CREATIVE SPACE STARTS HERE</div><h1>${authMode==="signup"?"Create your account":authMode==="phone-verify"?"Verify your phone":"Welcome back"}</h1><p class="auth-sub">${authMode==="signup"?"Join magic hour and keep your creative work in one place.":authMode==="phone-verify"?"Enter the one-time code sent to "+esc(pendingPhone):"Sign in to access your magic hour workspace."}</p>
 ${!phoneMode&&authMode==="login"?`<button class="social-auth google-auth" data-auth-google><span class="google-g">G</span> Continue with Google</button><button class="social-auth whatsapp-auth" data-auth-phone><span>◉</span> Continue with WhatsApp</button><div class="auth-divider"><span>or use email</span></div>`:""}
@@ -83,10 +120,10 @@ ${authMode==="login"?`<button class="text-btn auth-reset" data-auth-reset>Forgot
 
 function render(){if(!currentUser){renderAuth();return;}const body=activeTool?renderTool():page==="Home"?renderHome():page==="New chat"?renderChat():renderGeneric();app.innerHTML=`
 <div class="shell">
-<header class="topbar"><button class="icon-btn" data-action="menu" aria-label="Toggle menu">☰</button><div class="brand"><span class="brand-mark">m</span><span>magic hour<small>AI STUDIO</small></span></div><div class="top-spacer"></div><button class="wallet" data-modal="wallet"><span class="coin">¢</span><strong>${walletBalance.toLocaleString()}</strong><span class="add-coin">+</span></button><button class="icon-btn notif" data-page="Notifications" aria-label="Notifications">♧</button><button class="icon-btn account-btn" data-action="account" aria-label="Account">☺</button></header>
-<div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","⌂")}${sidebarLink("New chat","✧")}${sidebarLink("Library","▣")}${sidebarLink("Projects","▦")}${sidebarLink("All tools","◈")}<div class="side-label">Account</div>${sidebarLink("Settings","⚙")}<div class="side-bottom"><b>♛ &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
+<header class="topbar"><button class="icon-btn" data-action="menu" aria-label="Toggle menu">${iconSvg("menu",19)}</button><div class="brand"><span class="brand-mark">m</span><span>magic hour<small>AI STUDIO</small></span></div><div class="top-spacer"></div><button class="wallet" data-modal="wallet"><span class="coin">${iconSvg("coin",17)}</span><strong>${walletBalance.toLocaleString()}</strong><span class="add-coin">+</span></button><button class="icon-btn notif" data-page="Notifications" aria-label="Notifications">${iconSvg("bell",18)}</button><button class="icon-btn account-btn" data-action="account" aria-label="Account">${iconSvg("user",19)}</button></header>
+<div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","home")}${sidebarLink("New chat","chat")}${sidebarLink("Library","library")}${sidebarLink("Projects","grid")}${sidebarLink("All tools","sparkles")}<div class="side-label">Account</div>${sidebarLink("Settings","settings")}<div class="side-bottom"><b>${iconSvg("crown",15)} &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
 <main class="content">${body}</main></div>
-<nav class="bottom-nav"><button class="${page==="Home"&&!activeTool?"active":""}" data-page="Home"><span>⌂</span>Home</button><button class="${page==="Library"?"active":""}" data-page="Library"><span>▱</span>Library</button><button class="create-fab" data-page="Create" aria-label="Create">＋</button><button class="${page==="Projects"?"active":""}" data-page="Projects"><span>▦</span>Projects</button><button class="${page==="Settings"?"active":""}" data-page="Settings"><span>⚙</span>Settings</button></nav>
+<nav class="bottom-nav"><button class="${page==="Home"&&!activeTool?"active":""}" data-page="Home"><span>${iconSvg("home",18)}</span>Home</button><button class="${page==="Library"?"active":""}" data-page="Library"><span>${iconSvg("library",18)}</span>Library</button><button class="create-fab" data-page="Create" aria-label="Create">＋</button><button class="${page==="Projects"?"active":""}" data-page="Projects"><span>${iconSvg("grid",18)}</span>Projects</button><button class="${page==="Settings"?"active":""}" data-page="Settings"><span>${iconSvg("settings",18)}</span>Settings</button></nav>
 </div>`;}
 function goPage(p){page=p;activeTool=null;render();window.scrollTo({top:0,behavior:"smooth"});}
 function openTool(id){activeTool=id;page="Home";selectedFile=null;render();window.scrollTo({top:0,behavior:"smooth"});}
