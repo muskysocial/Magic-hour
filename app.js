@@ -25,7 +25,7 @@ try {
   sessionState = "offline";
   console.warn("Supabase session unavailable:",error);
 }
-app.dataset.backend = "connected";
+app.dataset.backend = "configured";
 app.dataset.auth = sessionState;
 
 const esc = (s) => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
