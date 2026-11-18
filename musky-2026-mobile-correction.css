@@ -134,3 +134,53 @@ main{width:100%!important;max-width:none!important;margin:0!important;padding:0 
 #msMenuButton svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 #msQuickMenu button{display:flex;align-items:center;gap:12px}
 #msQuickMenu button svg{width:22px;height:22px;flex:0 0 22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:#1877f2}
+
+
+/* 2026 native phone typography: one device-led text size throughout. */
+html,body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif!important}
+body,#studio,#studio .pane,#studio .sh,#studio .pt,
+#studio :is(h1,h2,h3,h4,p,small,label,strong,em,span,a,button,input,textarea,select,summary,li),
+.topbar :is(span,strong,small,a,button),#mxBar button{
+  font-size:1rem!important;
+}
+#studio :is(h1,h2,h3,h4,p,small,label,strong,em,span,a,button,input,textarea,select,summary,li){
+  line-height:1.35;
+}
+#studio :is(input,textarea,select,button){font:inherit!important}
+#studio .pane :is(h1,h2,h3,h4){font-weight:750!important;letter-spacing:normal!important}
+#studio .pane :is(.eyebrow,.muted,.status,.bottom-note,.hm-sub,.hm-counts,.hm-meta,.pf-tag,.pf-profile-email){font-size:1rem!important}
+#mxBar{
+  position:fixed!important;left:50%!important;right:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+  transform:translateX(-50%)!important;width:calc(100% - 24px)!important;max-width:560px!important;
+  min-height:68px!important;display:flex!important;align-items:center!important;justify-content:space-around!important;
+  gap:2px!important;padding:7px 8px!important;border:1px solid rgba(255,255,255,.5)!important;
+  border-radius:24px!important;background:rgba(255,255,255,.68)!important;
+  box-shadow:0 12px 36px rgba(18,28,50,.18),inset 0 1px 0 rgba(255,255,255,.8)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(180%)!important;backdrop-filter:blur(24px) saturate(180%)!important;
+}
+#mxBar button{
+  flex:1 1 0!important;min-width:0!important;min-height:54px!important;padding:5px 1px!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  gap:3px!important;border:0!important;border-radius:16px!important;background:transparent!important;
+  color:#687080!important;font-weight:650!important;white-space:nowrap!important;
+}
+#mxBar button span{display:grid!important;place-items:center!important;font-size:1rem!important;line-height:1!important}
+#mxBar button span svg{width:25px!important;height:25px!important;stroke-width:1.9!important}
+#mxBar button.on{background:rgba(24,119,242,.13)!important;color:#1264d8!important}
+#mxBar button:active{transform:scale(.96)}
+#studio{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))!important}
+#studio .pane{padding-bottom:24px!important}
+#studio #profileSection .pf-hero,#studio #profileSection .pf-content-preview,
+#studio #profileSection .pf-highlight-card{width:100%;max-width:100%;box-sizing:border-box}
+#studio #profileSection .pf-identity-copy{min-width:0}
+#studio #profileSection #pfName{overflow-wrap:anywhere}
+@media(prefers-color-scheme:dark){
+  #mxBar{background:rgba(30,34,44,.72)!important;border-color:rgba(255,255,255,.14)!important}
+  #mxBar button{color:#c2c8d4!important}
+  #mxBar button.on{background:rgba(80,145,255,.2)!important;color:#8db7ff!important}
+}
+@media(max-width:380px){
+  #mxBar{width:calc(100% - 16px)!important;padding:6px 4px!important}
+  #mxBar button{white-space:normal!important;line-height:1.15!important}
+  #mxBar button span svg{width:23px!important;height:23px!important}
+}
