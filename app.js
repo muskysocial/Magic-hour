@@ -22,6 +22,9 @@ let authNotice = "";
 let pendingPhone = "";
 let selectedFile = null;
 let selectedAssetFile = null;
+let selectedReferenceFace = null;
+let selectedTargetImage = null;
+let workspaceResultUrl = "";
 let userProjects = [];
 let userAssets = [];
 let walletTransactions = [];
@@ -100,7 +103,19 @@ function renderHome(){return `
 <section><div class="section-head"><div><h2>${iconSvg("sparkles",15)} &nbsp;Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ${iconSvg("arrow",13)}</button></div><div class="tools-grid">${tools.map(toolCard).join("")}</div></section>
 <section class="more-section"><div class="section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button class="text-btn" data-page="All tools">View all ${iconSvg("arrow",13)}</button></div><div class="more-grid">${moreTools.slice(0,7).map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${iconSvg(i,23)}</span><b>${n}</b></button>`).join("")}</div></section>
 <section class="pro-banner"><div class="crown">${iconSvg("crown",32)}</div><div class="pro-copy"><b>Upgrade to Pro</b><p>Get more credits, unlock premium tools and enjoy priority processing.</p></div><button class="pro-button" data-modal="pro">Go Pro ${iconSvg("arrow",13)}</button></section>`;}
-function renderTool(){const t=toolById(activeTool);return `
+function renderTool(){const t=toolById(activeTool);if(activeTool==="headswap")return `
+<div class="section-head"><div><h1 class="page-title">Image HeadSwap</h1><p class="page-sub">Swap a face into another photo with the BFS AI engine.</p></div><button class="back-btn" data-action="back">← Back</button></div>
+<div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg("scan-face",27)}</div><div><h2>AI Face Swap</h2><p>Upload a reference face and the photo you want to edit.</p></div></div>
+<div class="notice">Your images and generated result are stored in your private Supabase library. Use photos you own or have permission to edit.</div>
+<div class="swap-upload-grid">
+<div class="upload-zone"><div style="font-size:30px">${iconSvg("user-round",27)}</div><h3>1. Reference face</h3><p>The face to place into the target photo.</p><label for="reference-face-upload">Choose face photo</label><input id="reference-face-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden><div class="page-sub">${selectedReferenceFace?esc(selectedReferenceFace.name):"No face photo selected"}</div></div>
+<div class="upload-zone"><div style="font-size:30px">${iconSvg("image",27)}</div><h3>2. Target photo</h3><p>The photo whose face will be replaced.</p><label for="target-image-upload">Choose target photo</label><input id="target-image-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden><div class="page-sub">${selectedTargetImage?esc(selectedTargetImage.name):"No target photo selected"}</div></div>
+</div>
+<div id="file-status" class="page-sub">${workspaceNotice||"Select both images to begin."}</div>
+<button class="primary-btn" data-action="run-headswap" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Generating face swap…":"Generate face swap"}</button>
+${workspaceResultUrl?`<div class="swap-result"><h3>Your generated image</h3><img src="${esc(workspaceResultUrl)}" alt="Generated face swap result"><a href="${esc(workspaceResultUrl)}" target="_blank" rel="noopener">Open or save result</a></div>`:""}
+</div>`;
+return `
 <div class="section-head"><div><h1 class="page-title">${t.name}</h1><p class="page-sub">${t.desc}</p></div><button class="back-btn" data-action="back">← Back</button></div>
 <div class="workspace"><div class="workspace-head"><div class="tool-icon">${iconSvg(t.icon,27)}</div><div><h2>${t.name}</h2><p>Your dedicated magic hour workspace</p></div></div>
 <div class="notice">Your account, project records and private file storage are connected. AI generation still needs its provider service to be enabled.</div>
@@ -153,7 +168,7 @@ function render(){if(!currentUser){renderAuth();return;}const body=activeTool?re
 <nav class="bottom-nav"><button class="${page==="Home"&&!activeTool?"active":""}" data-page="Home"><span>${iconSvg("home",18)}</span>Home</button><button class="${page==="Library"?"active":""}" data-page="Library"><span>${iconSvg("library",18)}</span>Library</button><button class="create-fab" data-page="Create" aria-label="Create">＋</button><button class="${page==="Projects"?"active":""}" data-page="Projects"><span>${iconSvg("grid",18)}</span>Projects</button><button class="${page==="Settings"?"active":""}" data-page="Settings"><span>${iconSvg("settings",18)}</span>Settings</button></nav>
 </div>`;}
 function goPage(p){page=p;activeTool=null;render();window.scrollTo({top:0,behavior:"smooth"});}
-function openTool(id){activeTool=id;page="Home";selectedFile=null;selectedAssetFile=null;currentProjectId=null;workspaceNotice="";render();window.scrollTo({top:0,behavior:"smooth"});}
+function openTool(id){activeTool=id;page="Home";selectedFile=null;selectedAssetFile=null;selectedReferenceFace=null;selectedTargetImage=null;workspaceResultUrl="";currentProjectId=null;workspaceNotice="";render();window.scrollTo({top:0,behavior:"smooth"});}
 function showModal(type){
  const node=document.createElement("div");node.className="modal-backdrop";
  const rows=walletTransactions.length?walletTransactions.map(t=>`<div class="account-panel"><b>${esc(t.transaction_type)} · ${Number(t.amount).toLocaleString()} coins</b><p>${esc(t.description||"Wallet activity")} · ${new Date(t.created_at).toLocaleString()}</p></div>`).join(""):'<p>No wallet transactions yet.</p>';
@@ -162,7 +177,57 @@ function showModal(type){
  node.addEventListener("click",e=>{if(e.target===node||e.target.closest("[data-close]"))node.remove();});document.body.append(node);
 }
 function sendMessage(text){const value=text.trim();if(!value)return;messages.push({role:"user",text:value});messages.push({role:"assistant",text:"I’ve got your request. Live AI replies will be available when the chat model is connected. You can open one of the tool workspaces from Home in the meantime."});page="New chat";activeTool=null;render();}
-app.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.authMode){authMode=b.dataset.authMode;authNotice="";renderAuth();return;}if(b.dataset.authGoogle){const googleButton=b;googleButton.disabled=true;googleButton.textContent="Connecting to Google…";(async()=>{try{const {data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:"https://magichour-black.vercel.app",skipBrowserRedirect:true}});if(error)throw error;if(!data?.url)throw new Error("Supabase did not return a Google authorization URL. Check that Google is enabled in Supabase Auth providers.");window.location.assign(data.url);}catch(error){authNotice="Google sign-in could not start: "+(error?.message||"Unknown error");renderAuth();}})();return;}if(b.dataset.authPhone){authMode="phone";authNotice="Use your full international phone number. WhatsApp delivery requires the WhatsApp messaging provider to be configured.";renderAuth();return;}if(b.dataset.authReset){const email=app.querySelector('input[name="email"]')?.value?.trim();if(!email){authNotice="Enter your email address first.";renderAuth();return;}supabase.auth.resetPasswordForEmail(email,{redirectTo:"https://magichour-black.vercel.app"}).then(({error})=>{authNotice=error?error.message:"Password reset instructions have been sent if this email is registered.";renderAuth();});return;}if(b.dataset.action==="account"){goPage("Settings");return;}if(b.dataset.action==="signout"){supabase.auth.signOut();return;}if(b.dataset.page){goPage(b.dataset.page);return;}if(b.dataset.tool){openTool(b.dataset.tool);return;}if(b.dataset.project){const p=userProjects.find(x=>x.id===b.dataset.project);if(p){activeTool=p.tool_id;page="Home";currentProjectId=p.id;workspaceNotice="Project opened. Upload a file to add it to this project.";render();}return;}if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";render();return;}if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="prepare"){
+app.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.authMode){authMode=b.dataset.authMode;authNotice="";renderAuth();return;}if(b.dataset.authGoogle){const googleButton=b;googleButton.disabled=true;googleButton.textContent="Connecting to Google…";(async()=>{try{const {data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:"https://magichour-black.vercel.app",skipBrowserRedirect:true}});if(error)throw error;if(!data?.url)throw new Error("Supabase did not return a Google authorization URL. Check that Google is enabled in Supabase Auth providers.");window.location.assign(data.url);}catch(error){authNotice="Google sign-in could not start: "+(error?.message||"Unknown error");renderAuth();}})();return;}if(b.dataset.authPhone){authMode="phone";authNotice="Use your full international phone number. WhatsApp delivery requires the WhatsApp messaging provider to be configured.";renderAuth();return;}if(b.dataset.authReset){const email=app.querySelector('input[name="email"]')?.value?.trim();if(!email){authNotice="Enter your email address first.";renderAuth();return;}supabase.auth.resetPasswordForEmail(email,{redirectTo:"https://magichour-black.vercel.app"}).then(({error})=>{authNotice=error?error.message:"Password reset instructions have been sent if this email is registered.";renderAuth();});return;}if(b.dataset.action==="account"){goPage("Settings");return;}if(b.dataset.action==="signout"){supabase.auth.signOut();return;}if(b.dataset.page){goPage(b.dataset.page);return;}if(b.dataset.tool){openTool(b.dataset.tool);return;}if(b.dataset.project){const p=userProjects.find(x=>x.id===b.dataset.project);if(p){activeTool=p.tool_id;page="Home";currentProjectId=p.id;workspaceNotice="Project opened. Upload a file to add it to this project.";render();}return;}if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600).then(({data,error})=>{if(error){alert("Could not open file: "+error.message);return;}window.open(data.signedUrl,"_blank","noopener");});}return;}if(b.dataset.extra){openTool(b.dataset.extra.toLowerCase().replace(/[^a-z0-9]+/g,"-"));return;}if(b.dataset.modal){showModal(b.dataset.modal);return;}if(b.dataset.action==="back"){activeTool=null;page="Home";render();return;}if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="run-headswap"){
+ if(!selectedReferenceFace||!selectedTargetImage){workspaceNotice="Choose both a reference face and a target photo.";render();return;}
+ if(!currentUser){workspaceNotice="Please sign in again.";render();return;}
+ const allowed=["image/jpeg","image/png","image/webp"];
+ if(!allowed.includes(selectedReferenceFace.type)||!allowed.includes(selectedTargetImage.type)){workspaceNotice="Use JPG, PNG or WebP images.";render();return;}
+ if(selectedReferenceFace.size>100*1024*1024||selectedTargetImage.size>100*1024*1024){workspaceNotice="Each image must be smaller than 100 MB.";render();return;}
+ workspaceBusy=true;workspaceResultUrl="";workspaceNotice="Uploading your images securely…";render();
+ let uploadedPaths=[];
+ try{
+  let projectId=currentProjectId;
+  if(!projectId){
+   const {data:project,error:projectError}=await supabase.from("mh_projects").insert({user_id:currentUser.id,title:"Face Swap "+new Date().toLocaleString(),tool_id:"headswap",status:"processing",metadata:{provider:"bfs-best-face-swap"}}).select("id").single();
+   if(projectError)throw projectError;
+   projectId=project.id;currentProjectId=projectId;
+  }else{
+   const {error:projectError}=await supabase.from("mh_projects").update({status:"processing",updated_at:new Date().toISOString()}).eq("id",projectId).eq("user_id",currentUser.id);
+   if(projectError)throw projectError;
+  }
+  const uploadOne=async(file,role)=>{
+   const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+   const path=currentUser.id+"/"+projectId+"/"+Date.now()+"-"+role+"-"+safeName;
+   const {error:uploadError}=await supabase.storage.from("magic-hour-assets").upload(path,file,{contentType:file.type,upsert:false});
+   if(uploadError)throw uploadError;
+   uploadedPaths.push(path);
+   const {error:assetError}=await supabase.from("mh_assets").insert({user_id:currentUser.id,project_id:projectId,storage_path:path,file_name:file.name,mime_type:file.type,size_bytes:file.size});
+   if(assetError)throw assetError;
+   return path;
+  };
+  workspaceNotice="Sending images to the BFS face-swap engine…";render();
+  const referencePath=await uploadOne(selectedReferenceFace,"reference-face");
+  const targetPath=await uploadOne(selectedTargetImage,"target-photo");
+  const {data,error}=await supabase.functions.invoke("bfs-face-swap",{body:{referencePath,targetPath,projectId}});
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||"The face-swap provider did not return a result.");
+  workspaceResultUrl=data.signedUrl||"";
+  if(!workspaceResultUrl&&data.asset?.storage_path){
+   const {data:signed,error:signedError}=await supabase.storage.from("magic-hour-assets").createSignedUrl(data.asset.storage_path,3600);
+   if(signedError)throw signedError;
+   workspaceResultUrl=signed?.signedUrl||"";
+  }
+  selectedReferenceFace=null;selectedTargetImage=null;
+  workspaceNotice="Face swap completed. Your result has been saved to your private Library.";
+  await loadAccountData();
+ }catch(error){
+  workspaceNotice="Face swap failed: "+(error?.message||String(error));
+  if(currentProjectId)await supabase.from("mh_projects").update({status:"failed",updated_at:new Date().toISOString()}).eq("id",currentProjectId).eq("user_id",currentUser.id);
+  await loadAccountData();
+ }finally{workspaceBusy=false;render();}
+ return;
+}
+if(b.dataset.action==="prepare"){
  if(!selectedAssetFile){workspaceNotice="Choose a file first.";render();return;}
  if(!currentUser){workspaceNotice="Please sign in again.";render();return;}
  if(selectedAssetFile.size>100*1024*1024){workspaceNotice="File exceeds the 100 MB storage limit.";render();return;}
@@ -185,6 +250,6 @@ app.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return
  return;
 }});
 app.addEventListener("submit",async e=>{if(e.target.id==="auth-form"){e.preventDefault();const fd=new FormData(e.target);const submit=e.target.querySelector("button[type=submit]");submit.disabled=true;submit.textContent="Please wait…";let result;if(authMode==="phone"){pendingPhone=String(fd.get("phone")||"").trim();result=await supabase.auth.signInWithOtp({phone:pendingPhone});if(!result.error){authMode="phone-verify";authNotice="A verification code was requested. Delivery depends on your configured SMS/WhatsApp provider.";renderAuth();return;}}else if(authMode==="phone-verify"){result=await supabase.auth.verifyOtp({phone:pendingPhone,token:String(fd.get("otp")||"").trim(),type:"sms"});}else{const email=String(fd.get("email")||"").trim();const password=String(fd.get("password")||"");if(authMode==="signup"){result=await supabase.auth.signUp({email,password,options:{emailRedirectTo:"https://magichour-black.vercel.app",data:{full_name:String(fd.get("name")||"").trim()}}});}else{result=await supabase.auth.signInWithPassword({email,password});}}submit.disabled=false;if(result.error){authNotice=result.error.message;renderAuth();}else if(authMode==="signup"&&!result.data.session){authNotice="Account created. Check your inbox and spam folder for the confirmation email.";renderAuth();}else if(authMode==="phone"||authMode==="phone-verify"){currentUser=result.data.user||null;authNotice="";page="Home";render();}else{currentUser=result.data.user||null;authNotice="";page="Home";render();}return;}});
-app.addEventListener("change",e=>{if(e.target.id==="asset-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=e.target.files[0].name;const status=document.querySelector("#file-status");if(status)status.textContent="Selected: "+selectedFile;}});
+app.addEventListener("change",e=>{if(e.target.id==="reference-face-upload"&&e.target.files?.[0]){selectedReferenceFace=e.target.files[0];workspaceNotice="Reference face selected. Now choose the target photo.";render();return;}if(e.target.id==="target-image-upload"&&e.target.files?.[0]){selectedTargetImage=e.target.files[0];workspaceNotice="Target photo selected. Ready when both images are selected.";render();return;}if(e.target.id==="asset-upload"&&e.target.files?.[0]){selectedAssetFile=e.target.files[0];selectedFile=e.target.files[0].name;const status=document.querySelector("#file-status");if(status)status.textContent="Selected: "+selectedFile;}});
 app.addEventListener("submit",e=>{if(e.target.id==="chat-form"){e.preventDefault();const input=e.target.querySelector("input");sendMessage(input.value);}});
 render();
