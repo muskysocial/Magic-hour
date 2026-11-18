@@ -151,3 +151,22 @@ body{font-size:14px}
 /* Background Remover result preview */
 .transparent-preview{background-color:#f5f7fa;background-image:linear-gradient(45deg,#d9dee7 25%,transparent 25%),linear-gradient(-45deg,#d9dee7 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9dee7 75%),linear-gradient(-45deg,transparent 75%,#d9dee7 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}
 .result-actions a.primary-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+
+
+/* PiAPI image-to-video workspace */
+.video-credit-strip{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;padding:14px;border:1px solid #29334a;border-radius:15px;background:linear-gradient(120deg,#111a2a,#171329)}
+.video-credit-strip>div{display:flex;flex-direction:column;gap:5px}
+.video-credit-strip small{font-size:9px;font-weight:800;letter-spacing:1.1px;color:#98a8c1}
+.video-credit-strip strong{font-size:20px;color:#fff}
+.video-credit-strip strong span{font-size:12px;color:#7e8ca2;font-weight:600}
+.video-upload-zone{display:flex;flex-direction:column;align-items:center;text-align:center}
+.video-source-preview{width:min(100%,360px);height:190px;border:1px dashed #46516b;border-radius:15px;background:#090f19;display:grid;place-items:center;overflow:hidden;margin-bottom:13px;color:#7786a2}
+.video-source-preview img{width:100%;height:100%;object-fit:contain}
+.video-field-label{display:block;margin:18px 0 8px;font-size:12px;font-weight:800;color:#dce6f5}
+.video-prompt{width:100%;min-height:100px;resize:vertical;border:1px solid #2a3548;border-radius:13px;background:#090f19;color:#f4f7fc;padding:13px;font:inherit;font-size:13px;line-height:1.5}
+.video-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.video-options label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:700;color:#aebbd0}
+.video-options select{width:100%;min-height:43px;border:1px solid #2a3548;border-radius:11px;background:#0b111c;color:#f5f7fb;padding:0 10px;font:inherit;font-size:12px}
+.generated-video{display:block;width:100%;max-height:560px;border-radius:15px;background:#000;margin:12px 0}
+.history-image video{width:100%;height:100%;object-fit:cover}
+@media(max-width:520px){.video-options{grid-template-columns:1fr}.video-credit-strip strong{font-size:18px}}
