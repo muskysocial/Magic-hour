@@ -111,7 +111,7 @@ function renderTool(){const t=toolById(activeTool);if(activeTool==="headswap")re
 <div class="upload-zone"><div style="font-size:30px">${iconSvg("user-round",27)}</div><h3>1. Reference face</h3><p>The face to place into the target photo.</p><label for="reference-face-upload">Choose face photo</label><input id="reference-face-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden><div class="page-sub">${selectedReferenceFace?esc(selectedReferenceFace.name):"No face photo selected"}</div></div>
 <div class="upload-zone"><div style="font-size:30px">${iconSvg("image",27)}</div><h3>2. Target photo</h3><p>The photo whose face will be replaced.</p><label for="target-image-upload">Choose target photo</label><input id="target-image-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden><div class="page-sub">${selectedTargetImage?esc(selectedTargetImage.name):"No target photo selected"}</div></div>
 </div>
-<div id="file-status" class="page-sub">${workspaceNotice||"Select both images to begin."}</div>
+<div id="file-status" class="page-sub">${esc(workspaceNotice||"Select both images to begin.")}</div>
 <button class="primary-btn" data-action="run-headswap" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Generating face swap…":"Generate face swap"}</button>
 ${workspaceResultUrl?`<div class="swap-result"><h3>Your generated image</h3><img src="${esc(workspaceResultUrl)}" alt="Generated face swap result"><a href="${esc(workspaceResultUrl)}" target="_blank" rel="noopener">Open or save result</a></div>`:""}
 </div>`;
