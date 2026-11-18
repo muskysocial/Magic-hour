@@ -451,7 +451,6 @@ html.mx-light body{background:#f7f8fc!important}
     ["peopleSection", "👥", "Meet people", "linear-gradient(160deg,#1877f2,#f45b9a)"],
     ["notifSection", "🔔", "Notifications", "linear-gradient(160deg,#1877f2,#8a5cf6)"],
     ["jobsSection", "💼", "Job Updates", "linear-gradient(160deg,#11998e,#38ef7d)"],
-    ["librarySection", "📚", "Library", "linear-gradient(160deg,#0f9b8e,#4facfe)"],
   ];
   window.shell.homeRenderer = (el, ctx) => {
     credits = ctx && ctx.credits;
