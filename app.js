@@ -276,17 +276,20 @@ app.addEventListener("change",e=>{if(e.target.id==="reference-recent-image"){sel
 app.addEventListener("submit",e=>{if(e.target.id==="chat-form"){e.preventDefault();const input=e.target.querySelector("input");sendMessage(input.value);}});
 // Progressive Web App setup and Android install prompt
 let deferredInstallPrompt=null;
-const installButton=document.getElementById("install-app");
 window.addEventListener("beforeinstallprompt",event=>{
  event.preventDefault();
  deferredInstallPrompt=event;
- if(installButton)installButton.hidden=false;
+ const button=document.getElementById("install-app");
+ if(button)button.hidden=false;
 });
 window.addEventListener("appinstalled",()=>{
  deferredInstallPrompt=null;
- if(installButton)installButton.hidden=true;
+ const button=document.getElementById("install-app");
+ if(button)button.hidden=true;
 });
-installButton?.addEventListener("click",async()=>{
+document.addEventListener("click",async event=>{
+ const button=event.target.closest("#install-app");
+ if(!button)return;
  if(!deferredInstallPrompt){
   alert("To install MuskySocials, open this site in Chrome, tap the three-dot menu, then choose Install app or Add to Home screen.");
   return;
@@ -294,7 +297,7 @@ installButton?.addEventListener("click",async()=>{
  deferredInstallPrompt.prompt();
  await deferredInstallPrompt.userChoice;
  deferredInstallPrompt=null;
- installButton.hidden=true;
+ button.hidden=true;
 });
 if("serviceWorker" in navigator){
  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("PWA service worker:",error)));
