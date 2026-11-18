@@ -1,16 +1,16 @@
 // MuskySocials app shell v1: light Facebook-style look, bigger text,
 // bottom bar, Menu grid, Settings. Loaded from index.html after auth.js.
 const KEY = "musky-settings";
-const DEFAULTS = { theme: "light", size: 1 };
+const DEFAULTS = { theme: "light" };
 const S = (() => {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { return { ...DEFAULTS }; }
 })();
-if (![1, 1.1, 1.2].includes(Number(S.size))) S.size = 1;
+S.size = 1;
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 function apply() {
   document.documentElement.classList.toggle("mx-light", S.theme === "light");
-  document.documentElement.style.setProperty("--mx-font-scale", String(S.size));
+  document.documentElement.style.setProperty("--mx-font-scale", "1");
 }
 
 const CSS = `
@@ -439,7 +439,7 @@ function init() {
         "<button class='sh-settings-row' data-go='privacySection'><span class='sh-settings-row-icon'>▣</span><span><strong>Privacy & safety</strong><small>Read privacy and safety information</small></span><b>›</b></button>" +
       "</section>" +
       "<section class='sh-settings-group'><h3>Appearance</h3><div class='sh-settings-preference'><div><strong>Theme</strong><small>Choose your preferred look</small></div><div class='sh-row' id='shTheme'><button data-theme='light'>Light</button><button data-theme='dark'>Dark</button></div></div>" +
-      "<div class='sh-settings-preference'><div><strong>Text size</strong><small>Make text easier to read</small></div><div class='sh-row' id='shSize'><button data-size='1'>Normal</button><button data-size='1.1'>Comfortable</button><button data-size='1.2'>Large</button></div></div></section>" +
+      "<p class='sh-settings-device-type'>Text follows your phone's system font and display size.</p></section>" +
       "<p class='sh-settings-version'>MuskySocials · Account settings</p><button class='sh-out' id='shOut'>↪ &nbsp; Sign out</button>" +
     "</div>");
 
@@ -488,7 +488,6 @@ function init() {
   function renderSettings() {
     settings.querySelector("#shCred").textContent = "Credits: " + (credits === null ? "…" : credits);
     settings.querySelectorAll("#shTheme button").forEach((b) => b.classList.toggle("on", b.dataset.theme === S.theme));
-    settings.querySelectorAll("#shSize button").forEach((b) => b.classList.toggle("on", +b.dataset.size === S.size));
   }
   function renderAccountSettings() {
     const emailTop = accountSettings.querySelector("#shAccountEmail");
@@ -521,7 +520,7 @@ function init() {
   // Bottom bar
   const bar = document.createElement("nav");
   bar.id = "mxBar";
-  bar.innerHTML = [["homeSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', "Home"], ["shopSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18l-1 13H4L3 8Z"/><path d="M8 8a4 4 0 0 1 8 0"/></svg>', "Marketplace"], ["createPostSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', "Create"], ["profileSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', "Profile"]]
+  bar.innerHTML = [["profileSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', "Profile"], ["createPostSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', "Post"], ["chatSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 2v-5.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 11h8M8 14h5"/></svg>', "Message"], ["shopSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18l-1.5 12h-15L3 9Z"/><path d="M8 9a4 4 0 0 1 8 0"/></svg>', "Market"], ["socialsSection", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l3 3-3 3H7L4 10l3-3Z"/><path d="M7 17h10l3-3-3-3H7l-3 3 3 3Z"/></svg>', "Trade"]]
     .map(([id, i, l]) => '<button data-go="' + id + '" aria-label="' + l + '"' + (id === "homeSection" ? ' class="on"' : "") + '><span>' + i + "</span>" + l + "</button>").join("");
   document.body.appendChild(bar);
 
@@ -572,6 +571,9 @@ function init() {
       toolsHubSection: ["toolsHubSection", "videoSection", "headswapSection", "chatSection", "voiceCloneSection", "voiceSection", "cameraSection", "viralBoostSection", "creditSection"],
       profileSection: ["profileSection", "settingsSection", "adminSection", "membershipSection"],
       createPostSection: ["createPostSection", "eventsSection"],
+      chatSection: ["chatSection"],
+      shopSection: ["shopSection"],
+      socialsSection: ["socialsSection"],
     };
     chat.classList.toggle("mx-chat-fullscreen", id === "chatSection");
     if (id === "chatSection") loadHistory();
@@ -587,10 +589,8 @@ function init() {
   });
   settings.addEventListener("click", (e) => {
     const t = e.target.closest("[data-theme]");
-    const z = e.target.closest("[data-size]");
     if (t) S.theme = t.dataset.theme;
-    if (z) S.size = +z.dataset.size;
-    if (t || z) { save(); apply(); renderSettings(); }
+    if (t) { save(); apply(); renderSettings(); }
   });
   notificationPreferences.addEventListener("change", (e) => {
     const input = e.target.closest("[data-notif-pref]");
