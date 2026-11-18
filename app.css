@@ -131,3 +131,18 @@ body{font-size:14px}
 .install-app{border:1px solid #f2f5ff;border-radius:999px;background:#080808;color:#fff;padding:8px 12px;font-size:11px;font-weight:800;box-shadow:0 0 8px #fff8,0 0 18px #dce8ff33}
 .install-app[hidden]{display:none}
 @media(max-width:720px){.install-app{padding:7px 9px;font-size:10px}}
+
+
+/* Visual recent-image picker inspired by the reference layout */
+.recent-heading{margin:13px 0 8px;text-align:left;color:#8e91a5;font-size:11px;font-weight:700}
+.recent-strip{display:flex;align-items:flex-start;gap:10px;width:100%;overflow-x:auto;overflow-y:hidden;padding:2px 2px 9px;scrollbar-width:thin;scrollbar-color:#6750b8 transparent}
+.recent-thumb-wrap{position:relative;flex:0 0 76px;width:76px}
+.recent-thumb{position:relative;display:block;width:76px;height:82px;padding:2px;border:2px solid #343247;border-radius:14px;background:#11121d;overflow:hidden;cursor:pointer}
+.recent-thumb img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}
+.recent-thumb.selected{border-color:#9b79ff;box-shadow:0 0 0 1px #9b79ff,0 0 13px #8055ff66}
+.recent-check{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#19d99a;color:#05251b;font-size:13px;font-weight:900;box-shadow:0 2px 7px #0008}
+.recent-dismiss{position:absolute;right:-5px;bottom:-3px;width:23px;height:23px;border:2px solid #171725;border-radius:50%;background:#252536;color:#f4f2ff;font-size:18px;line-height:17px;cursor:pointer}
+.recent-empty{margin:0;text-align:left;color:#777b90;font-size:10px}
+.upload-new-button{display:inline-flex!important;align-items:center;gap:6px;padding:8px 11px!important;border:1px solid #4e3b8e!important;border-radius:9px!important;background:#21164a!important;color:#d8c9ff!important;font-size:11px!important;font-weight:800!important}
+.swap-upload-card .swap-preview{margin-bottom:10px}
+@media(max-width:640px){.recent-thumb-wrap,.recent-thumb{flex-basis:68px;width:68px}.recent-thumb{height:74px}.recent-strip{gap:9px}.recent-heading{margin-top:12px}}
