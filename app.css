@@ -170,3 +170,50 @@ body{font-size:14px}
 .generated-video{display:block;width:100%;max-height:560px;border-radius:15px;background:#000;margin:12px 0}
 .history-image video{width:100%;height:100%;object-fit:cover}
 @media(max-width:520px){.video-options{grid-template-columns:1fr}.video-credit-strip strong{font-size:18px}}
+
+/* All Social Media Sales Room */
+.social-room{max-width:1180px;margin:0 auto;color:#edf4ff}
+.social-room-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:clamp(20px,4vw,38px);border:1px solid #253c55;border-radius:22px;background:radial-gradient(circle at 85% 15%,#153c60 0,transparent 36%),linear-gradient(125deg,#0b1420,#080d15 72%);margin-bottom:16px}
+.social-room-hero h1{font:800 clamp(25px,4vw,39px) Manrope;margin:9px 0 8px;letter-spacing:-1.3px}
+.social-room-hero h1 span{color:#46c5ff}
+.social-room-hero p{color:#a9b8ca;font-size:13px;line-height:1.5;margin:0;max-width:600px}
+.social-category-kicker{color:#65caff;font-size:9px;font-weight:900;letter-spacing:1.5px}
+.social-room-mark{width:88px;height:88px;flex:0 0 88px;border-radius:25px;display:grid;place-items:center;background:linear-gradient(145deg,#152f49,#091522);border:1px solid #34658c;color:#f4fbff;font:900 42px Manrope;box-shadow:0 0 34px #168bd533}
+.social-room-mark span{color:#54ceff}
+.social-trust-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.social-trust-row span{font-size:10px;color:#c5d8e9;border:1px solid #28425b;background:#0b1a29;padding:6px 9px;border-radius:99px}
+.social-search-wrap{display:flex;align-items:center;gap:10px;border:1px solid #293d52;border-radius:13px;background:#0b131e;padding:0 14px;margin:14px 0}
+.social-search-wrap>span{font-size:22px;color:#71cfff}
+.social-search-wrap input{width:100%;min-width:0;background:transparent;border:0;outline:0;color:#fff;padding:14px 0;font:inherit;font-size:12px}
+.social-category-nav{display:flex;gap:8px;overflow:auto;padding:2px 0 13px;scrollbar-width:thin}
+.social-category-nav button{flex:0 0 auto;border:1px solid #2a4058;background:#101c2a;color:#d4e5f5;border-radius:99px;padding:8px 11px;font-size:10px;font-weight:700}
+.social-stock-note{border:1px solid #28445b;background:#0c1c2a;color:#bcd1e4;padding:12px 14px;border-radius:12px;font-size:11px;line-height:1.55;margin:3px 0 23px}
+.social-stock-note b{color:#76d8ff}
+.social-category{scroll-margin-top:15px;margin:22px 0 28px}
+.social-category-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:12px}
+.social-category-head h2{font:800 19px Manrope;margin:5px 0 3px;letter-spacing:-.4px}
+.social-category-head p{font-size:10px;color:#8194a9;margin:0}
+.social-product-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.social-product{min-width:0;border:1px solid #24374c;border-radius:15px;background:linear-gradient(145deg,#111d2a,#0a111b);padding:12px;box-shadow:0 8px 24px #0002}
+.social-product-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.social-brand-logo{height:42px;width:42px;display:grid;place-items:center;border:1px solid #2b4158;border-radius:12px;background:#f7faff;padding:7px;overflow:hidden}
+.social-brand-logo img{display:block;width:100%;height:100%;object-fit:contain}
+.social-logo-fallback{font:900 12px Manrope;color:#10263a}
+.social-stock{font-size:8px;color:#69e2b3;background:#0b2a25;border:1px solid #185746;padding:5px 7px;border-radius:99px;white-space:nowrap}
+.social-product h3{font:800 13px Manrope;margin:11px 0 3px;min-height:31px}
+.social-kind{font-size:10px;color:#8fa4b9;margin:0 0 11px}
+.social-details{border-top:1px solid #223247;padding-top:9px;display:grid;gap:7px}
+.social-details>div{display:flex;justify-content:space-between;align-items:flex-start;gap:7px;font-size:9px;line-height:1.35}
+.social-details span{color:#8294a9}
+.social-details b{color:#d7e6f5;text-align:right;font-size:9px;font-weight:700}
+.social-select{display:flex;align-items:center;gap:7px;margin-top:11px;color:#a9c4dc;font-size:10px;font-weight:700}
+.social-select input{accent-color:#35bfff;width:14px;height:14px}
+.social-book-btn{width:100%;display:flex;justify-content:center;align-items:center;gap:9px;margin-top:11px;padding:13px;border:0;border-radius:12px;background:linear-gradient(100deg,#24b8ed,#087bea);color:#00111e;font-weight:900;font-size:11px;cursor:pointer}
+.social-book-btn span{font-size:15px}
+.social-help-card{padding:19px;border:1px solid #28425b;border-radius:16px;background:linear-gradient(110deg,#101d2b,#0a121d);margin:24px 0 8px}
+.social-help-card h3{font:800 16px Manrope;margin:0 0 5px}
+.social-help-card p{font-size:11px;color:#9fb1c5;margin:0 0 12px}
+.social-help-card a{display:inline-flex;text-decoration:none;border:1px solid #2e83b8;background:#102a40;color:#7ed7ff;padding:9px 12px;border-radius:10px;font-size:11px;font-weight:800}
+.social-product[hidden],.social-category[hidden]{display:none!important}
+@media(max-width:900px){.social-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.social-room-hero{padding:17px;border-radius:17px}.social-room-mark{width:58px;height:58px;flex-basis:58px;border-radius:17px;font-size:29px}.social-room-hero h1{font-size:25px}.social-room-hero p{font-size:11px}.social-trust-row{gap:5px}.social-trust-row span{font-size:8px;padding:5px 7px}.social-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.social-product{padding:9px;border-radius:12px}.social-brand-logo{width:35px;height:35px;border-radius:10px}.social-product h3{font-size:11px;min-height:29px}.social-kind{font-size:9px}.social-details>div{font-size:8px}.social-details b{font-size:8px}.social-stock{font-size:7px;padding:4px 5px}.social-category-head h2{font-size:16px}}
