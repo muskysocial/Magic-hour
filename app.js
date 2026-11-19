@@ -263,7 +263,7 @@ function renderDeveloperPanel(){
  '<h3>API keys</h3><div class="api-key-list">'+keys+'</div>'+
  '<h3>API base URL</h3><div class="api-base-url"><code>'+SUPABASE_URL+'/functions/v1/developer-api</code><button class="secondary-btn" data-api-copy-base>Copy</button></div>'+
  '<h3>Available read endpoints</h3><div class="api-endpoints"><p><b>GET /v1/tools</b> — list available AI tools</p><p><b>GET /v1/account</b> — wallet balance and active membership</p><p><b>GET /v1/usage</b> — API usage for this key</p></div>'+
- '<p class="api-note">Generation endpoints and automatic coin billing are still being connected. These read endpoints are available now; do not build generation flows against pending tools yet.</p></section>';
+ '<p class="api-note">Face Swap is live at POST /v1/face-swap and costs 60 coins per successful request. Send multipart fields reference and target plus a unique Idempotency-Key header. Other generation tools are still being connected.</p></section>';
 }
 function renderGeneric(){
  const map={"Library":["library","Your Library","Your private uploaded files."],"Projects":["grid","Your Projects","Your saved creative projects."],"Settings":["settings","Settings","Manage your profile and account."],"All tools":["sparkles","Explore all tools","Choose a creative workspace."],"Create":["plus","Create something new","Choose a tool to start a project."],"Notifications":["bell","Notifications","You're all caught up."]};
