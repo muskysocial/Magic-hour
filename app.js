@@ -17,6 +17,7 @@ let messages = [];
 let sessionState = "checking";
 let currentUser = null;
 let walletBalance = 0;
+let membershipInfo = null;
 let dailyClaimAvailable = false;
 let dailyCoinClaiming = false;
 let dailyCoinMessage = "";
@@ -56,7 +57,7 @@ try {
   const {data,error} = await supabase.auth.getSession();
   sessionState = error ? "unknown" : (data.session ? "signed-in" : "signed-out");
   currentUser = data.session?.user || null;
-  if (currentUser) { await loadAccountData(); restoreWorkspaceState(); render(); }
+  if (currentUser) { await loadAccountData(); restoreWorkspaceState(); render(); await verifyReturnedPayment(); }
   if (error) console.warn("Auth session check:",error.message);
 } catch (error) {
   sessionState = "offline";
@@ -66,7 +67,7 @@ app.dataset.backend = "configured";
 app.dataset.auth = sessionState;
 supabase.auth.onAuthStateChange((_event, session) => {
   currentUser = session?.user || null;
-  if (currentUser) loadAccountData();
+  if (currentUser) loadAccountData().then(()=>verifyReturnedPayment());
   sessionState = currentUser ? "signed-in" : "signed-out";
   app.dataset.auth = sessionState;
   render();
@@ -238,18 +239,20 @@ function renderGeneric(){
 async function loadAccountData(){
   if(!currentUser)return;
   const uid=currentUser.id;
-  const [wallet,projects,assets,transactions,videoCredits]=await Promise.all([
+  const [wallet,projects,assets,transactions,videoCredits,membership]=await Promise.all([
     supabase.from("mh_wallets").select("balance").eq("user_id",uid).maybeSingle(),
     supabase.from("mh_projects").select("id,title,tool_id,status,created_at,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(100),
     supabase.from("mh_assets").select("id,project_id,storage_path,file_name,mime_type,size_bytes,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(100),
     supabase.from("mh_wallet_transactions").select("id,amount,transaction_type,description,reference,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
-    supabase.from("mh_video_credit_balances").select("credit_date,credits_remaining").eq("user_id",uid).maybeSingle()
+    supabase.from("mh_video_credit_balances").select("credit_date,credits_remaining").eq("user_id",uid).maybeSingle(),
+    supabase.from("mh_memberships").select("plan_key,plan_name,started_at,expires_at,unlimited_generations,unlimited_duration").eq("user_id",uid).maybeSingle()
   ]);
   if(!wallet.error&&wallet.data)walletBalance=Number(wallet.data.balance)||0;
   else if(wallet.error)console.warn("Wallet load:",wallet.error.message);
   if(!projects.error)userProjects=projects.data||[];else console.warn("Projects load:",projects.error.message);
   if(!assets.error){userAssets=await Promise.all((assets.data||[]).map(async a=>{if(!a.mime_type?.startsWith("image/"))return a;const {data:signed}=await supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600);return {...a,signedUrl:signed?.signedUrl||""};}));}else console.warn("Assets load:",assets.error.message);
   if(!transactions.error)walletTransactions=transactions.data||[];else console.warn("Wallet history:",transactions.error.message);
+  membershipInfo=!membership.error&&membership.data&&new Date(membership.data.expires_at)>new Date()?membership.data:null;
   const utcDay=new Date().toISOString().slice(0,10);
   dailyClaimAvailable=!walletTransactions.some(t=>t.description==="Daily coin claim"&&String(t.created_at).slice(0,10)===utcDay);
   dailyVideoCredits=!videoCredits.error&&videoCredits.data?.credit_date===utcDay?Number(videoCredits.data.credits_remaining):100;
@@ -279,12 +282,40 @@ async function claimDailyCoins(){
  catch(error){dailyCoinMessage="Could not claim your daily coins: "+(error?.message||String(error));}
  finally{dailyCoinClaiming=false;document.querySelectorAll(".modal-backdrop").forEach(node=>node.remove());render();showModal("wallet");}
 }
+const membershipPlans=[
+ {key:"gold",name:"Gold",price:"₦7,000",coins:"7,300",className:"gold",icon:"♛",features:["7,300 wallet coins included","One full year of membership","Gold member profile status","Access to supported premium features"]},
+ {key:"diamond",name:"Diamond",price:"₦15,000",coins:"16,000",className:"diamond",icon:"❄",features:["16,000 wallet coins included","One full year of membership","Diamond member profile status","Priority access to supported premium features"]},
+ {key:"platinum",name:"Platinum",price:"₦28,000",coins:"37,000",className:"platinum",icon:"✧",features:["37,000 wallet coins included","One full year of membership","Platinum member profile status","Premium generation access"]},
+ {key:"platinum_unlimited",name:"Platinum Unlimited",price:"₦36,000",coins:"37,000",className:"unlimited",icon:"♾",features:["37,000 wallet coins included","One full year of membership","Unlimited generation entitlement","Unlimited video-duration entitlement"]}
+];
+async function beginPaystack(product,button){
+ if(!currentUser){alert("Please sign in before purchasing.");return;}
+ const old=button?.textContent;if(button){button.disabled=true;button.textContent="Opening secure checkout…";}
+ try{
+  const {data,error}=await supabase.functions.invoke("paystack-membership",{body:{action:"initialize",product}});
+  if(error)throw error;if(!data?.authorization_url)throw new Error(data?.error||"Checkout could not be started.");
+  window.location.assign(data.authorization_url);
+ }catch(error){alert("Checkout failed: "+(error?.message||String(error)));if(button){button.disabled=false;button.textContent=old||"Continue";}}
+}
+async function verifyReturnedPayment(){
+ const params=new URLSearchParams(location.search);if(params.get("payment")!=="complete")return;
+ const reference=params.get("reference");history.replaceState({},document.title,location.pathname+location.hash);
+ if(!reference)return;
+ try{
+  const {data,error}=await supabase.functions.invoke("paystack-membership",{body:{action:"verify",reference}});
+  if(error)throw error;if(!data?.ok)throw new Error(data?.message||data?.error||"Payment has not been confirmed.");
+  await loadAccountData();alert("Payment confirmed! Your coins and membership have been activated.");showModal("pro");
+ }catch(error){alert("We couldn't confirm this payment yet: "+(error?.message||String(error))+". Your payment is not credited until Paystack confirms it.");}
+}
 function showModal(type){
  const node=document.createElement("div");node.className="modal-backdrop";
  const rows=walletTransactions.length?walletTransactions.map(t=>`<div class="account-panel"><b>${esc(t.transaction_type)} · ${Number(t.amount).toLocaleString()} coins</b><p>${esc(t.description||"Wallet activity")} · ${new Date(t.created_at).toLocaleString()}</p></div>`).join(""):'<p>No wallet transactions yet.</p>';
- const body=type==="wallet"?`<h2>Coin wallet</h2><p>Available balance: <b>${walletBalance.toLocaleString()} coins</b></p><div class="daily-claim-card"><div class="daily-claim-icon">${iconSvg("gift",24)}</div><div class="daily-claim-copy"><b>${dailyClaimAvailable?"Your daily gift is ready!":"Daily reward claimed"}</b><p>${dailyClaimAvailable?"Claim 100 free coins today. Come back tomorrow for your next reward.":"Your next 100-coin reward will be available tomorrow."}</p></div><button class="daily-claim-btn" data-action="claim-daily-coins" ${dailyClaimAvailable&&!dailyCoinClaiming?"":"disabled"}>${dailyCoinClaiming?"Claiming…":dailyClaimAvailable?"Claim 100 coins":"Claimed"}</button></div>${dailyCoinMessage?`<p class="notice">${esc(dailyCoinMessage)}</p>`:""}<div class="account-list">${rows}</div><p class="notice">Coin balance and daily rewards are saved to your account. Paid coin purchases will be connected when secure checkout is configured.</p>`:`<h2>Magic Hour Pro</h2><p>Membership checkout will be enabled after the secure Paystack connection and plan pricing are configured.</p>`;
- node.innerHTML=`<div class="modal" role="dialog" aria-modal="true">${body}<div class="modal-actions"><button class="secondary-btn" data-close>Close</button></div></div>`;
- node.addEventListener("click",e=>{if(e.target.closest('[data-action="claim-daily-coins"]')){claimDailyCoins();return;}if(e.target===node||e.target.closest("[data-close]"))node.remove();});document.body.append(node);
+ const packages=[{key:"coin_500",price:"₦500",coins:"500"},{key:"coin_1100",price:"₦1,000",coins:"1,100"},{key:"coin_2400",price:"₦2,000",coins:"2,400"}];
+ const active=membershipInfo?'<div class="membership-active"><span>ACTIVE MEMBERSHIP</span><b>'+esc(membershipInfo.plan_name)+'</b><small>Expires '+new Date(membershipInfo.expires_at).toLocaleDateString()+'</small><small>'+Math.max(0,Math.ceil((new Date(membershipInfo.expires_at)-Date.now())/86400000))+' days remaining</small></div>':'<div class="membership-inactive">No active membership · Choose your annual plan below</div>';
+ const cards=membershipPlans.map(p=>`<article class="membership-card ${p.className}"><div class="membership-card-glow"></div><div class="membership-card-top"><span class="membership-emblem">${p.icon}</span><span class="membership-year">365 DAYS</span></div><h3>${p.name}</h3><div class="membership-price">${p.price}<small>/ year</small></div><div class="membership-coins">＋ ${p.coins} coins included</div><ul>${p.features.map(f=>`<li><i>✓</i>${f}</li>`).join("")}</ul><button class="membership-buy" data-buy="${p.key}">Choose ${p.name}</button></article>`).join("");
+ const body=type==="wallet"?`<div class="membership-modal-head"><span class="membership-kicker">MUSKYSOCIALS WALLET</span><h2>Coin wallet</h2><p>Balance <b>${walletBalance.toLocaleString()} coins</b></p></div><div class="daily-claim-card"><div class="daily-claim-icon">${iconSvg("gift",24)}</div><div class="daily-claim-copy"><b>${dailyClaimAvailable?"Your daily gift is ready!":"Daily reward claimed"}</b><p>${dailyClaimAvailable?"Claim 100 free coins today. Come back tomorrow for your next reward.":"Your next 100-coin reward will be available tomorrow."}</p></div><button class="daily-claim-btn" data-action="claim-daily-coins" ${dailyClaimAvailable&&!dailyCoinClaiming?"":"disabled"}>${dailyCoinClaiming?"Claiming…":dailyClaimAvailable?"Claim 100 coins":"Claimed"}</button></div>${dailyCoinMessage?`<p class="notice">${esc(dailyCoinMessage)}</p>`:""}<h3 class="wallet-subtitle">Buy coins</h3><div class="coin-packages">${packages.map(p=>`<button class="coin-package" data-buy="${p.key}"><b>${p.coins}</b><span>coins</span><strong>${p.price}</strong></button>`).join("")}</div><h3 class="wallet-subtitle">Recent activity</h3><div class="account-list">${rows}</div>`:`<div class="membership-modal-head"><span class="membership-kicker">THE MUSKYSOCIALS MEMBERS CLUB</span><h2>Choose your level<span>✦</span></h2><p>Premium membership, wallet coins and a full year of access.</p></div>${active}<div class="membership-carousel">${cards}</div><p class="membership-footnote">Secure checkout powered by Paystack · Membership activates only after payment verification.</p>`;
+ node.innerHTML=`<div class="modal membership-dialog" role="dialog" aria-modal="true">${body}<div class="modal-actions"><button class="secondary-btn" data-close>Close</button></div></div>`;
+ node.addEventListener("click",e=>{const buy=e.target.closest("[data-buy]");if(buy){beginPaystack(buy.dataset.buy,buy);return;}if(e.target.closest('[data-action="claim-daily-coins"]')){claimDailyCoins();return;}if(e.target===node||e.target.closest("[data-close]"))node.remove();});document.body.append(node);
 }
 function workspaceStorageKey(){return currentUser?"musky-workspace:"+currentUser.id:null;}
 function persistWorkspaceState(){const key=workspaceStorageKey();if(!key)return;try{pendingSocialSelection=[...app.querySelectorAll("input[data-social-item]:checked")].map(input=>input.dataset.socialItem);localStorage.setItem(key,JSON.stringify({page,activeTool,scrollY:window.scrollY||0,videoDurationSeconds,videoAspectRatio,videoPromptText,currentProjectId,pendingSocialSelection}));}catch(error){console.warn("Workspace state could not be saved:",error);}}
