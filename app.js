@@ -70,6 +70,10 @@ let publicShipmentPassword = "";
 let shipmentOwnerMessages = [];
 let userShipments = [];
 let shipmentRefreshTimer = null;
+let isAdmin = false;
+let adminDashboardData = null;
+let adminDashboardLoading = false;
+let adminDashboardError = "";
 
 try {
   const {data,error} = await supabase.auth.getSession();
@@ -85,11 +89,14 @@ app.dataset.backend = "configured";
 app.dataset.auth = sessionState;
 supabase.auth.onAuthStateChange((_event, session) => {
   currentUser = session?.user || null;
-  if (currentUser) loadAccountData().then(()=>verifyReturnedPayment());
+  if (currentUser) { loadAccountData().then(()=>verifyReturnedPayment()); refreshAdminAccess().then(()=>{sendVisitorHeartbeat();render();}); }
+  else { isAdmin=false; adminDashboardData=null; sendVisitorHeartbeat(); }
   sessionState = currentUser ? "signed-in" : "signed-out";
   app.dataset.auth = sessionState;
   render();
 });
+refreshAdminAccess().then(()=>{sendVisitorHeartbeat();render();});
+setInterval(sendVisitorHeartbeat,60000);
 
 const iconSvg = (name,size=20) => {
   const paths = {
@@ -303,6 +310,51 @@ function renderDeveloperPanel(){
  '<h3>Available read endpoints</h3><div class="api-endpoints"><p><b>GET /v1/tools</b> — list available AI tools</p><p><b>GET /v1/account</b> — wallet balance and active membership</p><p><b>GET /v1/usage</b> — API usage for this key</p></div>'+
  '<p class="api-note">Face Swap is live at POST /v1/face-swap and costs 60 coins per successful request. Send multipart fields reference and target plus a unique Idempotency-Key header. Other generation tools are still being connected.</p></section>';
 }
+
+async function refreshAdminAccess(){
+ if(!currentUser){isAdmin=false;return false;}
+ try{const {data,error}=await supabase.from("admin_users").select("role").eq("user_id",currentUser.id).maybeSingle();isAdmin=!error&&!!data&&["admin","owner","super_admin"].includes(data.role);return isAdmin;}
+ catch{isAdmin=false;return false;}
+}
+function visitorSessionId(){
+ const key="mh_admin_visitor_id_v1";let id="";
+ try{id=localStorage.getItem(key)||"";if(!id){id=crypto.randomUUID();localStorage.setItem(key,id);}}catch{id=crypto.randomUUID();}
+ return id;
+}
+async function sendVisitorHeartbeat(){
+ try{await supabase.functions.invoke("admin-console",{body:{action:"heartbeat",visitor_id:visitorSessionId(),path:location.pathname+location.search}});}catch(error){console.warn("Visitor heartbeat:",error?.message||error);}
+}
+async function adminConsoleRequest(action,payload={}){
+ const {data,error}=await supabase.functions.invoke("admin-console",{body:{action,...payload}});
+ if(error)throw error;if(data?.error)throw new Error(data.error);return data;
+}
+async function loadAdminDashboard(silent=false){
+ if(!isAdmin||adminDashboardLoading)return;
+ adminDashboardLoading=true;adminDashboardError="";if(!silent)render();
+ try{adminDashboardData=await adminConsoleRequest("dashboard");}
+ catch(error){adminDashboardError=error?.message||String(error);}
+ finally{adminDashboardLoading=false;render();}
+}
+function renderAdminDashboard(){
+ if(!isAdmin)return '<section class="admin-wrap"><h1>Admin access required</h1><p>This account is not registered as an administrator.</p></section>';
+ if(!adminDashboardData&&!adminDashboardLoading){queueMicrotask(()=>loadAdminDashboard());}
+ if(!adminDashboardData)return '<section class="admin-wrap"><div class="admin-head"><div><div class="eyebrow">MAGIC HOUR CONTROL ROOM</div><h1>Admin dashboard</h1><p>Loading live app metrics…</p></div></div><div class="admin-loading">Checking users, guests, database and services…</div></section>';
+ const d=adminDashboardData,c=d.counts||{};
+ const health=(d.health||[]).map(h=>'<div class="admin-health-card"><span class="admin-health-dot '+esc(h.status)+'"></span><div><b>'+esc(h.name)+'</b><small>'+esc(h.detail)+'</small></div><strong>'+esc(h.status.toUpperCase())+'</strong></div>').join("");
+ const users=(d.users||[]).map(u=>'<tr><td><b>'+esc(u.email||"No email")+'</b><small>'+esc(u.id)+'</small></td><td>'+new Date(u.created_at).toLocaleDateString()+'</td><td>'+(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString():"Never")+'</td><td>'+Number(u.wallet_balance||0).toLocaleString()+'</td><td>'+esc(u.membership?.plan_name||"Free")+'</td></tr>').join("");
+ const issues=(d.issues||[]).map(x=>'<article class="admin-issue"><div><span class="admin-pill '+esc(x.severity)+'">'+esc(x.severity)+'</span> <span class="admin-pill">'+esc(x.status)+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.details||"No details provided")+'</p><small>'+new Date(x.created_at).toLocaleString()+'</small></div><div class="admin-issue-actions">'+(x.status!=="investigating"?'<button class="secondary-btn" data-admin-issue-status="'+x.id+'" data-status="investigating">Investigate</button>':"")+(x.status!=="resolved"?'<button class="primary-btn" data-admin-issue-status="'+x.id+'" data-status="resolved">Mark fixed</button>':'<span class="admin-resolved">Resolved</span>')+'</div></article>').join("")||'<p class="admin-muted">No issues recorded yet. Add an issue when something needs attention.</p>';
+ const visitors=(d.recent_visitors||[]).map(v=>{const u=(d.users||[]).find(x=>x.id===v.user_id);return '<tr><td>'+(u?esc(u.email):'<span class="admin-guest">Guest visitor</span>')+'</td><td>'+esc(v.last_path||"/")+'</td><td>'+new Date(v.last_seen_at).toLocaleString()+'</td></tr>';}).join("");
+ return '<section class="admin-wrap"><div class="admin-head"><div><div class="eyebrow">MAGIC HOUR CONTROL ROOM</div><h1>Admin dashboard</h1><p>Signed in as '+esc(currentUser?.email||"")+' · Updated '+new Date(d.generated_at).toLocaleTimeString()+'</p></div><button class="primary-btn" data-admin-refresh '+(adminDashboardLoading?'disabled':'')+'>↻ Refresh health</button></div>'+
+ (adminDashboardError?'<div class="admin-alert">'+esc(adminDashboardError)+'</div>':"")+
+ '<div class="admin-section-title"><h2>App overview</h2><span>Live database snapshot</span></div><div class="admin-stat-grid">'+
+ [['Registered users',c.registered_users,'accounts'],['Active visitors',c.active_visitors_5m,'last 5 minutes'],['Guest visitors',c.active_guests_24h,'last 24 hours'],['Guest sessions',c.guest_sessions_total,'recorded sessions'],['Projects',c.projects,'saved projects'],['Assets',c.assets,'uploaded files'],['Video jobs',c.video_jobs,'all jobs'],['Failed jobs',c.failed_video_jobs,'need attention'],['Shipments',c.shipments,'tracking records'],['Wallet transactions',c.wallet_transactions,'coin activity'],['Memberships',c.memberships,'premium records']].map(x=>'<div class="admin-stat"><span>'+esc(x[0])+'</span><b>'+Number(x[1]||0).toLocaleString()+'</b><small>'+esc(x[2])+'</small></div>').join("")+'</div>'+
+ '<div class="admin-section-title"><h2>App health</h2><span>Service checks and operational signals</span></div><div class="admin-health-grid">'+health+'</div><p class="admin-footnote">Storage health is marked unknown until a dedicated storage probe is enabled. Failed video jobs are counted from recorded job statuses.</p>'+
+ '<div class="admin-section-title"><h2>Users</h2><span>Latest 100 registered accounts</span></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Account</th><th>Joined</th><th>Last sign-in</th><th>Coins</th><th>Plan</th></tr></thead><tbody>'+users+'</tbody></table></div>'+
+ '<div class="admin-section-title"><h2>Live visitors</h2><span>Recent tracked sessions · guests do not need accounts</span></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Visitor</th><th>Page</th><th>Last seen</th></tr></thead><tbody>'+visitors+'</tbody></table></div>'+
+ '<div class="admin-section-title"><h2>Issue desk</h2><span>Record, investigate and close app issues</span></div><form id="admin-issue-form" class="admin-issue-form"><input name="title" required maxlength="160" placeholder="Issue title (e.g. Video generation failing)"><select name="severity"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select><textarea name="details" rows="3" placeholder="What happened? Include steps or error message…"></textarea><button class="primary-btn" type="submit">＋ Record issue</button></form><div class="admin-issue-list">'+issues+'</div>'+
+ '<div class="admin-section-title"><h2>Failed video jobs</h2><span>Most recent recorded failures</span></div><div class="admin-fail-list">'+((d.failed_jobs||[]).map(j=>'<article><b>'+esc(j.id)+'</b><span>'+esc(j.error_message||"No error detail saved")+'</span><small>'+new Date(j.updated_at||j.created_at).toLocaleString()+'</small></article>').join("")||'<p class="admin-muted">No failed video jobs recorded.</p>')+'</div>'+
+ '<div class="admin-section-title"><h2>Admin tools</h2><span>Operational shortcuts</span></div><div class="admin-tools-grid"><button data-admin-refresh>Run diagnostics</button><button data-admin-scroll="users">Review user accounts</button><button data-admin-scroll="issues">Open issue desk</button><button data-admin-scroll="failed">Review failed jobs</button></div></section>';
+}
 function renderGeneric(){
  const map={"Library":["library","Your Library","Your private uploaded files."],"Projects":["grid","Your Projects","Your saved creative projects."],"Settings":["settings","Settings","Manage your profile and account."],"All tools":["sparkles","Explore all tools","Choose a creative workspace."],"Create":["plus","Create something new","Choose a tool to start a project."],"Notifications":["bell","Notifications","You're all caught up."]};
  const [icon,title,desc]=map[page]||map["All tools"];
@@ -438,10 +490,10 @@ ${phoneMode?(authMode==="phone-verify"?`<label>Verification code<input name="otp
 ${phoneMode?`<button class="text-btn auth-switch" data-auth-mode="login">Back to email sign in</button>`:`<button class="text-btn auth-switch" data-auth-mode="${authMode==="login"?"signup":"login"}">${authMode==="login"?"New to magic hour? Create an account":"Already have an account? Sign in"}</button>`}
 ${authMode==="login"?`<button class="text-btn auth-reset" data-auth-reset>Forgot password?</button>`:""}<p class="auth-message" role="status">${esc(authNotice)}</p><p class="auth-legal">By continuing, you agree to use magic hour responsibly.</p></div></div>`;const googleButton=app.querySelector("[data-auth-google]");if(googleButton){googleButton.addEventListener("click",async event=>{event.preventDefault();event.stopPropagation();googleButton.disabled=true;googleButton.textContent="Connecting to Google…";authNotice="";try{const {data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:"https://magichour-black.vercel.app",skipBrowserRedirect:true}});if(error)throw error;if(!data?.url)throw new Error("No Google authorization URL was returned. Confirm Google is enabled in Supabase Auth → Providers.");window.location.href=data.url;}catch(error){authNotice="Google sign-in failed: "+(error?.message||String(error));renderAuth();}});}}
 
-function render(){if(new URLSearchParams(location.search).has("shipment")){app.innerHTML=renderPublicShipment();if(publicShipmentData)initPublicShipmentMap(publicShipmentData);return;}if(!currentUser){renderAuth();return;}if(!workspaceStateRestored)restoreWorkspaceState();const body=activeTool?renderTool():page==="Home"?renderHome():page==="New chat"?renderChat():renderGeneric();app.innerHTML=`
+function render(){if(new URLSearchParams(location.search).has("shipment")){app.innerHTML=renderPublicShipment();if(publicShipmentData)initPublicShipmentMap(publicShipmentData);return;}if(!currentUser){renderAuth();return;}if(!workspaceStateRestored)restoreWorkspaceState();const body=activeTool?renderTool():page==="Home"?renderHome():page==="New chat"?renderChat():page==="Admin dashboard"?renderAdminDashboard():renderGeneric();app.innerHTML=`
 <div class="shell">
 <header class="topbar"><button class="icon-btn" data-action="menu" aria-label="Toggle menu">${iconSvg("menu",19)}</button><div class="brand"><span class="brand-mark"><svg class="brand-symbol" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 49V15l22 25 22-25v34" /></svg></span><span>magic hour<small>AI STUDIO</small></span></div><div class="top-spacer"></div><button class="install-app" id="install-app" hidden>Install app</button><button class="wallet" data-modal="wallet" aria-label="Coin wallet, ${walletBalance} coins${dailyClaimAvailable?", daily gift available":""}"><span class="coin">${iconSvg("coin",17)}</span><strong>${walletBalance.toLocaleString()}</strong>${dailyClaimAvailable?`<span class="daily-gift-indicator" title="Daily coins ready to claim">${iconSvg("gift",15)}</span>`:""}<span class="add-coin">+</span></button><button class="icon-btn notif" data-page="Notifications" aria-label="Notifications">${iconSvg("bell",18)}</button><button class="icon-btn account-btn" data-action="account" aria-label="Account">${iconSvg("user",19)}</button></header>
-<div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","home")}${sidebarLink("New chat","chat")}${sidebarLink("Library","library")}${sidebarLink("Projects","grid")}${sidebarLink("All tools","sparkles")}<div class="side-label">Account</div>${sidebarLink("Settings","settings")}<div class="side-bottom"><b>${iconSvg("crown",15)} &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
+<div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","home")}${sidebarLink("New chat","chat")}${sidebarLink("Library","library")}${sidebarLink("Projects","grid")}${sidebarLink("All tools","sparkles")}<div class="side-label">Account</div>${sidebarLink("Settings","settings")}${isAdmin?sidebarLink("Admin dashboard","shield-check"):""}<div class="side-bottom"><b>${iconSvg("crown",15)} &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
 <main class="content">${body}</main></div>
 <nav class="bottom-nav"><button class="${page==="Home"&&!activeTool?"active":""}" data-page="Home"><span>${iconSvg("home",18)}</span>Home</button><button class="${page==="Library"?"active":""}" data-page="Library"><span>${iconSvg("library",18)}</span>Library</button><button class="create-fab" data-page="Create" aria-label="Create">＋</button><button class="${page==="Projects"?"active":""}" data-page="Projects"><span>${iconSvg("grid",18)}</span>Projects</button><button class="${page==="Settings"?"active":""}" data-page="Settings"><span>${iconSvg("settings",18)}</span>Settings</button></nav>
 </div>`;if(page==="Settings"&&!developerLoaded&&!developerLoading)loadDeveloperDashboard();if(activeTool==="social"&&pendingSocialSelection.length){app.querySelectorAll("input[data-social-item]").forEach(input=>{input.checked=pendingSocialSelection.includes(input.dataset.socialItem);});}persistWorkspaceState();}
