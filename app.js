@@ -68,6 +68,7 @@ let publicShipmentData = null;
 let publicShipmentError = "";
 let publicShipmentPassword = "";
 let shipmentOwnerMessages = [];
+let userShipments = [];
 let shipmentRefreshTimer = null;
 
 try {
@@ -202,11 +203,12 @@ function renderSocialRoom(){
 function renderShipmentOwnerControls(){if(!shipmentCreated?.id)return "";const rows=shipmentOwnerMessages.map(m=>'<div class="shipment-chat-message '+(m.sender_role==="sender"?"mine":"")+'"><b>'+esc(m.sender_name)+'</b><p>'+esc(m.message)+'</p><small>'+new Date(m.created_at).toLocaleString()+'</small></div>').join("");return '<section class="workspace shipment-owner-controls"><h2>Manage this shipment</h2><p class="page-sub">Change the route, publish road notices or request documents. Recipients see updates on their tracking page.</p><form id="shipment-update-form" class="shipment-fields"><label>Departure location<input name="origin" required value="'+esc(shipmentCreated.origin||"")+'"></label><label>Destination<input name="destination" required value="'+esc(shipmentCreated.destination||"")+'"></label><label>New departure time<input name="departure" type="datetime-local" required value="'+(shipmentCreated.departure_at?new Date(new Date(shipmentCreated.departure_at).getTime()-new Date(shipmentCreated.departure_at).getTimezoneOffset()*60000).toISOString().slice(0,16):"")+'"></label><label>Expected arrival<input name="arrival" type="datetime-local" required value="'+(shipmentCreated.arrival_at?new Date(new Date(shipmentCreated.arrival_at).getTime()-new Date(shipmentCreated.arrival_at).getTimezoneOffset()*60000).toISOString().slice(0,16):"")+'"></label><label>Update type<select name="event_type"><option value="checkpoint">Route checkpoint</option><option value="delay">Delay / road issue</option><option value="document_request">Document request</option><option value="notice">Shipment notice</option></select></label><label>Update title<input name="title" required maxlength="120" placeholder="e.g. Customs documents required"></label><label class="shipment-wide">Message / details<textarea name="details" rows="2" maxlength="1000" placeholder="Explain the checkpoint, issue or documents needed"></textarea></label><button class="primary-btn" type="submit">Publish shipment update</button></form><h3>Messages with recipient</h3><div class="shipment-chat-log">'+(rows||'<p class="recent-empty">No messages yet.</p>')+'</div><form id="shipment-sender-message" class="shipment-chat-form"><input name="message" maxlength="1000" required placeholder="Message the recipient…"><button class="primary-btn" type="submit">Send</button></form></section>';}
 async function loadShipmentOwnerMessages(){if(!shipmentCreated?.id)return;const {data,error}=await supabase.from("ms_shipment_messages").select("id,sender_role,sender_name,message,created_at").eq("shipment_id",shipmentCreated.id).order("created_at",{ascending:true}).limit(100);if(!error)shipmentOwnerMessages=data||[];}
 function renderShipmentRoom(){
- const carriers=["UPS","FedEx","Knight-Swift","DHL","Other carrier"];
+ const carriers=["UPS","FedEx","Knight-Swift","DHL","USPS","Aramex","GIG Logistics","Local courier","Other carrier"];
  const carrierOptions=carriers.map(x=>'<option value="'+x+'">'+x+'</option>').join("");
+ const shipmentList=userShipments.map(x=>'<button class="account-panel shipment-history-row" data-shipment-open="'+x.id+'"><b>'+esc(x.tracking_code)+' · '+esc(x.carrier)+'</b><p>'+esc(x.origin)+' → '+esc(x.destination)+' · '+esc(x.status)+'</p><small>'+new Date(x.created_at).toLocaleDateString()+'</small></button>').join("");
  return '<div class="section-head"><div><h1 class="page-title">Shipment Journey</h1><p class="page-sub">Create a private shipment page with an animated route preview and scheduled journey.</p></div><button class="back-btn" data-action="back">← Back</button></div>'+
  '<div class="shipment-intro"><div class="shipment-intro-icon">✈</div><div><b>Your shipment, beautifully presented</b><p>Choose a carrier, add your items, set the journey schedule and share a private tracking page. This is a privately operated scheduled journey preview, not the carrier\'s official tracking system.</p></div></div>'+
- (shipmentNotice?'<p class="notice">'+esc(shipmentNotice)+'</p>':'')+
+ (shipmentNotice?'<p class="notice">'+esc(shipmentNotice)+'</p>':'')+(shipmentList?'<section class="shipment-history"><h2>Your shipments</h2>'+shipmentList+'</section>':'')+
  (shipmentCreated?'<div class="shipment-created"><span class="shipment-kicker">SHIPMENT CREATED</span><h2>'+esc(shipmentCreated.tracking_code)+'</h2><p>Tracking link</p><div class="shipment-share-url"><code>'+esc(shipmentCreated.url)+'</code><button class="secondary-btn" data-shipment-copy="url">Copy</button></div><p>Tracking password</p><div class="shipment-share-url"><code>'+esc(shipmentCreated.password)+'</code><button class="secondary-btn" data-shipment-copy="password">Copy</button></div><p class="shipment-warning">Save these details. The password is shown only once. Share it privately with your recipient.</p></div>'+renderShipmentOwnerControls():'')+
  '<form id="shipment-create-form" class="workspace shipment-form"><div class="workspace-head"><div class="tool-icon">'+iconSvg("truck",27)+'</div><div><h2>Build a shipment</h2><p>Enter the shipment details and schedule</p></div></div><div class="shipment-fields">'+
  '<label>Shipping service<select name="carrier" required>'+carrierOptions+'</select></label><label>Transport type<select name="transport" required><option value="air">Air freight · Aeroplane</option><option value="road">Road freight · Truck</option><option value="sea">Sea freight · Ship</option></select></label>'+
@@ -310,13 +312,14 @@ function renderGeneric(){
 async function loadAccountData(){
   if(!currentUser)return;
   const uid=currentUser.id;
-  const [wallet,projects,assets,transactions,videoCredits,membership]=await Promise.all([
+  const [wallet,projects,assets,transactions,videoCredits,membership,shipments]=await Promise.all([
     supabase.from("mh_wallets").select("balance").eq("user_id",uid).maybeSingle(),
     supabase.from("mh_projects").select("id,title,tool_id,status,created_at,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(100),
     supabase.from("mh_assets").select("id,project_id,storage_path,file_name,mime_type,size_bytes,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(100),
     supabase.from("mh_wallet_transactions").select("id,amount,transaction_type,description,reference,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
     supabase.from("mh_video_credit_balances").select("credit_date,credits_remaining").eq("user_id",uid).maybeSingle(),
-    supabase.from("mh_memberships").select("plan_key,plan_name,started_at,expires_at,unlimited_generations,unlimited_duration").eq("user_id",uid).maybeSingle()
+    supabase.from("mh_memberships").select("plan_key,plan_name,started_at,expires_at,unlimited_generations,unlimited_duration").eq("user_id",uid).maybeSingle(),
+    supabase.from("ms_shipments").select("id,tracking_code,tracking_slug,carrier,transport_mode,sender_name,recipient_name,origin,destination,item_names,departure_at,arrival_at,status,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(50)
   ]);
   if(!wallet.error&&wallet.data)walletBalance=Number(wallet.data.balance)||0;
   else if(wallet.error)console.warn("Wallet load:",wallet.error.message);
@@ -324,6 +327,7 @@ async function loadAccountData(){
   if(!assets.error){userAssets=await Promise.all((assets.data||[]).map(async a=>{if(!a.mime_type?.startsWith("image/"))return a;const {data:signed}=await supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600);return {...a,signedUrl:signed?.signedUrl||""};}));}else console.warn("Assets load:",assets.error.message);
   if(!transactions.error)walletTransactions=transactions.data||[];else console.warn("Wallet history:",transactions.error.message);
   membershipInfo=!membership.error&&membership.data&&new Date(membership.data.expires_at)>new Date()?membership.data:null;
+  userShipments=!shipments.error?(shipments.data||[]):[];
   const utcDay=new Date().toISOString().slice(0,10);
   dailyClaimAvailable=!walletTransactions.some(t=>t.description==="Daily coin claim"&&String(t.created_at).slice(0,10)===utcDay);
   dailyVideoCredits=!videoCredits.error&&videoCredits.data?.credit_date===utcDay?Number(videoCredits.data.credits_remaining):100;
@@ -414,6 +418,7 @@ if(b.dataset.apiRevoke){
 }
 if(b.dataset.apiCopy!==undefined){if(!developerNewKey)return;try{await navigator.clipboard.writeText(developerNewKey);b.textContent="Copied!";}catch{alert("Copy was blocked by your browser. Select and copy the key manually.");}return;}
 if(b.dataset.apiCopyBase!==undefined){try{await navigator.clipboard.writeText(SUPABASE_URL+"/functions/v1/developer-api");b.textContent="Copied!";}catch{alert("Copy was blocked by your browser.");}return;}
+if(b.dataset.shipmentOpen){const {data,error}=await supabase.from("ms_shipments").select("id,tracking_code,tracking_slug,carrier,transport_mode,sender_name,recipient_name,origin,destination,item_names,departure_at,arrival_at,status").eq("id",b.dataset.shipmentOpen).eq("user_id",currentUser.id).single();if(error){alert("Could not open shipment: "+error.message);return;}shipmentCreated={...data,url:location.origin+location.pathname+"?shipment="+data.tracking_slug,password:""};await loadShipmentOwnerMessages();render();return;}
 if(b.dataset.shipmentCopy){const value=b.dataset.shipmentCopy==="url"?shipmentCreated?.url:shipmentCreated?.password;if(value){try{await navigator.clipboard.writeText(value);b.textContent="Copied";}catch{alert("Select and copy the value manually.");}}return;}
 if(b.dataset.socialBook!==undefined){const ci=Number(b.dataset.socialBook);const group=socialCatalog[ci];if(!group)return;const chosen=[...app.querySelectorAll('input[data-social-item="'+ci+'"]:checked')].map(x=>x.value);const list=chosen.length?chosen.join(", "):"Please send me the available options for "+group.category;const msg="Hello MuskySocials! I want to book from: "+group.category+".\nServices: "+list+".\nPlease share current stock, account/service age, username/password handover details and 2FA status before payment.";window.open("https://wa.me/2349041259863?text="+encodeURIComponent(msg),"_blank","noopener");return;}
 if(b.dataset.socialJump!==undefined){document.getElementById("social-category-"+b.dataset.socialJump)?.scrollIntoView({behavior:"smooth",block:"start"});return;}
