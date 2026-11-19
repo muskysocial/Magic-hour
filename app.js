@@ -1,4 +1,4 @@
-import { supabase } from "./api.js";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./api.js";
 
 const app = document.querySelector("#app");
 const tools = [
@@ -52,6 +52,12 @@ let videoPollingToken = 0;
 let videoPromptText = "";
 let currentProjectId = null;
 let dismissedRecentAssetIds = new Set();
+let developerKeys = [];
+let developerUsage = null;
+let developerNewKey = "";
+let developerError = "";
+let developerLoading = false;
+let developerLoaded = false;
 
 try {
   const {data,error} = await supabase.auth.getSession();
@@ -224,13 +230,48 @@ return `
 <button class="primary-btn" data-action="prepare" ${workspaceBusy?"disabled":""}>${workspaceBusy?"Saving project…":"Save project and upload file"}</button>
 </div>`;}
 function renderChat(){return `<h1 class="page-title">New chat</h1><p class="page-sub">A creative assistant for your ideas.</p><div class="workspace"><div class="chat-log">${messages.length?messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text)}</div>`).join(""):'<div class="bubble">Hi! I’m your magic hour assistant. Tell me what you want to make, or choose one of the creative tools on Home.</div>'}</div><form class="chatbar" id="chat-form"><span>${iconSvg("sparkles",18)}</span><input id="chat-input" placeholder="Message magic hour..." aria-label="Message magic hour"><button class="send" aria-label="Send message">${iconSvg("send",18)}</button></form><div class="notice">The chat interface is ready. Connect your preferred AI chat API to enable live AI responses.</div></div>`;}
+async function developerApiRequest(route, method="GET", body=null){
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session?.access_token)throw new Error("Your sign-in session has expired. Please sign in again.");
+ const response=await fetch(SUPABASE_URL+"/functions/v1/developer-api"+route,{
+  method,
+  headers:{"Authorization":"Bearer "+session.access_token,"apikey":SUPABASE_ANON_KEY,"Content-Type":"application/json"},
+  ...(body?{body:JSON.stringify(body)}:{})
+ });
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||data?.ok===false)throw new Error(data?.error||("Developer API request failed ("+response.status+")."));
+ return data;
+}
+async function loadDeveloperDashboard(force=false){
+ if(developerLoading||(!force&&developerLoaded))return;
+ developerLoading=true;developerError="";render();
+ try{
+  const [keys,usage]=await Promise.all([developerApiRequest("/keys"),developerApiRequest("/usage")]);
+  developerKeys=Array.isArray(keys.keys)?keys.keys:[];
+  developerUsage=usage;developerLoaded=true;
+ }catch(error){developerError=error?.message||String(error);}
+ finally{developerLoading=false;render();}
+}
+function renderDeveloperPanel(){
+ const keys=developerKeys.length?developerKeys.map(k=>'<div class="account-panel api-key-row"><div><b>'+esc(k.name||"API key")+'</b><p>'+esc(k.key_prefix||"ms_live_…")+' · Created '+new Date(k.created_at).toLocaleDateString()+'</p><small>'+(k.revoked_at?'Revoked':'Last used: '+(k.last_used_at?new Date(k.last_used_at).toLocaleString():'Never'))+'</small></div>'+(k.revoked_at?'':'<button class="secondary-btn" data-api-revoke="'+esc(k.id)+'">Revoke</button>')+'</div>').join(""):'<div class="notice">No API keys yet. Create your first key to let another website connect to MuskySocials.</div>';
+ const usage=developerUsage||{};
+ return '<section class="developer-panel"><div class="developer-head"><div><span class="developer-kicker">FOR DEVELOPERS</span><h2>MuskySocials API</h2><p>Connect other websites and apps to your MuskySocials account.</p></div><button class="secondary-btn" data-api-refresh '+(developerLoading?'disabled':'')+'>'+(developerLoading?'Loading…':'Refresh')+'</button></div>'+
+ (developerError?'<p class="notice">'+esc(developerError)+'</p>':'')+
+ (developerNewKey?'<div class="api-new-key"><b>Your new API key — copy it now</b><p>This secret is shown only once. Store it somewhere safe.</p><code>'+esc(developerNewKey)+'</code><button class="primary-btn" data-api-copy>Copy API key</button></div>':'')+
+ '<div class="api-metrics"><div><small>REQUESTS · 30 DAYS</small><b>'+Number(usage.totalRequests||0).toLocaleString()+'</b></div><div><small>SUCCESSFUL</small><b>'+Number(usage.successfulRequests||0).toLocaleString()+'</b></div><div><small>FAILED</small><b>'+Number(usage.failedRequests||0).toLocaleString()+'</b></div></div>'+
+ '<div class="api-create-row"><input id="api-key-name" maxlength="60" placeholder="Key name (e.g. My website)" aria-label="API key name"><button class="primary-btn" data-api-create '+(developerLoading?'disabled':'')+'>Create API key</button></div>'+
+ '<h3>API keys</h3><div class="api-key-list">'+keys+'</div>'+
+ '<h3>API base URL</h3><div class="api-base-url"><code>'+SUPABASE_URL+'/functions/v1/developer-api</code><button class="secondary-btn" data-api-copy-base>Copy</button></div>'+
+ '<h3>Available read endpoints</h3><div class="api-endpoints"><p><b>GET /v1/tools</b> — list available AI tools</p><p><b>GET /v1/account</b> — wallet balance and active membership</p><p><b>GET /v1/usage</b> — API usage for this key</p></div>'+
+ '<p class="api-note">Generation endpoints and automatic coin billing are still being connected. These read endpoints are available now; do not build generation flows against pending tools yet.</p></section>';
+}
 function renderGeneric(){
  const map={"Library":["library","Your Library","Your private uploaded files."],"Projects":["grid","Your Projects","Your saved creative projects."],"Settings":["settings","Settings","Manage your profile and account."],"All tools":["sparkles","Explore all tools","Choose a creative workspace."],"Create":["plus","Create something new","Choose a tool to start a project."],"Notifications":["bell","Notifications","You're all caught up."]};
  const [icon,title,desc]=map[page]||map["All tools"];
  const projectsHtml=userProjects.length?userProjects.map(p=>`<button class="account-panel project-row" data-project="${p.id}"><b>${esc(p.title)}</b><p>${esc(p.tool_id)} · ${esc(p.status)} · ${new Date(p.created_at).toLocaleDateString()}</p></button>`).join(""):'<div class="notice">No projects yet. Open a tool and upload a file to create your first project.</div>';
  const assetsHtml=userAssets.length?`<div class="history-grid">${userAssets.map(a=>`<div class="history-item"><button class="history-image" ${a.mime_type?.startsWith("video/")?`data-asset="${a.id}"`:`data-preview="${esc(a.signedUrl||"")}"`} aria-label="View ${esc(a.file_name)}">${a.mime_type?.startsWith("image/")&&a.signedUrl?`<img src="${esc(a.signedUrl)}" alt="${esc(a.file_name)}" loading="lazy">`:a.mime_type?.startsWith("video/")&&a.signedUrl?`<video src="${esc(a.signedUrl)}" muted playsinline></video>`:`<span class="history-file">${iconSvg("folder",24)}</span>`}</button><span class="history-name">${esc(a.file_name)}</span><small>${new Date(a.created_at).toLocaleDateString()}</small><button class="history-delete" data-delete-asset="${a.id}" aria-label="Delete ${esc(a.file_name)}">Delete</button></div>`).join("")}</div>`:'<div class="notice">Your uploaded files will appear here.</div>';
  return `<div class="empty-panel"><div class="empty-icon">${iconSvg(icon,34)}</div><h1 class="page-title">${title}</h1><p class="page-sub">${desc}</p>
- ${page==="Settings"?`<div class="account-panel"><b>Signed in account</b><p>${esc(currentUser?.email||"")}</p><p>Wallet balance: ${walletBalance.toLocaleString()} coins</p><button class="secondary-btn" data-action="signout">Sign out</button></div>`:""}
+ ${page==="Settings"?`<div class="account-panel"><b>Signed in account</b><p>${esc(currentUser?.email||"")}</p><p>Wallet balance: ${walletBalance.toLocaleString()} coins</p><button class="secondary-btn" data-action="signout">Sign out</button></div>${renderDeveloperPanel()}`:""}
  ${page==="Projects"?`<div class="account-list">${projectsHtml}</div>`:""}
  ${page==="Library"?`<div class="account-list">${assetsHtml}</div>`:""}
  ${page==="All tools"?`<div class="tools-grid">${tools.map(toolCard).join("")}</div><div class="more-grid" style="margin-top:14px">${moreTools.map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${iconSvg(i,23)}</span><b>${n}</b></button>`).join("")}</div>`:""}
@@ -272,7 +313,7 @@ function render(){if(!currentUser){renderAuth();return;}if(!workspaceStateRestor
 <div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","home")}${sidebarLink("New chat","chat")}${sidebarLink("Library","library")}${sidebarLink("Projects","grid")}${sidebarLink("All tools","sparkles")}<div class="side-label">Account</div>${sidebarLink("Settings","settings")}<div class="side-bottom"><b>${iconSvg("crown",15)} &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
 <main class="content">${body}</main></div>
 <nav class="bottom-nav"><button class="${page==="Home"&&!activeTool?"active":""}" data-page="Home"><span>${iconSvg("home",18)}</span>Home</button><button class="${page==="Library"?"active":""}" data-page="Library"><span>${iconSvg("library",18)}</span>Library</button><button class="create-fab" data-page="Create" aria-label="Create">＋</button><button class="${page==="Projects"?"active":""}" data-page="Projects"><span>${iconSvg("grid",18)}</span>Projects</button><button class="${page==="Settings"?"active":""}" data-page="Settings"><span>${iconSvg("settings",18)}</span>Settings</button></nav>
-</div>`;if(activeTool==="social"&&pendingSocialSelection.length){app.querySelectorAll("input[data-social-item]").forEach(input=>{input.checked=pendingSocialSelection.includes(input.dataset.socialItem);});}persistWorkspaceState();}
+</div>`;if(page==="Settings"&&!developerLoaded&&!developerLoading)loadDeveloperDashboard();if(activeTool==="social"&&pendingSocialSelection.length){app.querySelectorAll("input[data-social-item]").forEach(input=>{input.checked=pendingSocialSelection.includes(input.dataset.socialItem);});}persistWorkspaceState();}
 function goPage(p){page=p;activeTool=null;render();window.scrollTo({top:0,behavior:"smooth"});persistWorkspaceState();}
 function openTool(id){activeTool=id;page="Home";selectedFile=null;selectedAssetFile=null;selectedReferenceFace=null;selectedTargetImage=null;workspaceResultUrl="";currentProjectId=null;workspaceNotice="";render();window.scrollTo({top:0,behavior:"smooth"});}
 async function claimDailyCoins(){
@@ -324,6 +365,23 @@ window.addEventListener("pagehide",persistWorkspaceState);
 let workspaceSaveTimer=null;window.addEventListener("scroll",()=>{clearTimeout(workspaceSaveTimer);workspaceSaveTimer=setTimeout(persistWorkspaceState,250);},{passive:true});
 function sendMessage(text){const value=text.trim();if(!value)return;messages.push({role:"user",text:value});messages.push({role:"assistant",text:"I’ve got your request. Live AI replies will be available when the chat model is connected. You can open one of the tool workspaces from Home in the meantime."});page="New chat";activeTool=null;render();}
 app.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;
+if(b.dataset.apiRefresh!==undefined){developerLoaded=false;await loadDeveloperDashboard(true);return;}
+if(b.dataset.apiCreate!==undefined){
+ const name=document.querySelector("#api-key-name")?.value?.trim()||"Default API key";
+ b.disabled=true;b.textContent="Creating…";
+ try{const data=await developerApiRequest("/keys/create","POST",{name});developerNewKey=data.key||"";developerLoaded=false;await loadDeveloperDashboard(true);}
+ catch(error){developerError=error?.message||String(error);render();}
+ return;
+}
+if(b.dataset.apiRevoke){
+ if(!confirm("Revoke this API key? Any website using it will immediately lose access."))return;
+ b.disabled=true;b.textContent="Revoking…";
+ try{await developerApiRequest("/keys/revoke","POST",{id:b.dataset.apiRevoke});developerLoaded=false;await loadDeveloperDashboard(true);}
+ catch(error){developerError=error?.message||String(error);render();}
+ return;
+}
+if(b.dataset.apiCopy!==undefined){if(!developerNewKey)return;try{await navigator.clipboard.writeText(developerNewKey);b.textContent="Copied!";}catch{alert("Copy was blocked by your browser. Select and copy the key manually.");}return;}
+if(b.dataset.apiCopyBase!==undefined){try{await navigator.clipboard.writeText(SUPABASE_URL+"/functions/v1/developer-api");b.textContent="Copied!";}catch{alert("Copy was blocked by your browser.");}return;}
 if(b.dataset.socialBook!==undefined){const ci=Number(b.dataset.socialBook);const group=socialCatalog[ci];if(!group)return;const chosen=[...app.querySelectorAll('input[data-social-item="'+ci+'"]:checked')].map(x=>x.value);const list=chosen.length?chosen.join(", "):"Please send me the available options for "+group.category;const msg="Hello MuskySocials! I want to book from: "+group.category+".\nServices: "+list+".\nPlease share current stock, account/service age, username/password handover details and 2FA status before payment.";window.open("https://wa.me/2349041259863?text="+encodeURIComponent(msg),"_blank","noopener");return;}
 if(b.dataset.socialJump!==undefined){document.getElementById("social-category-"+b.dataset.socialJump)?.scrollIntoView({behavior:"smooth",block:"start"});return;}
 
