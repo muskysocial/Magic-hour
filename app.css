@@ -350,3 +350,6 @@ body{font-size:14px}
 .shipment-chat-message b{font-size:11px;color:#83dff0}.shipment-chat-message p{margin:5px 0;color:#e0eaf3;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.shipment-chat-message small{font-size:9px;color:#8095a9}
 .shipment-chat-form{display:flex;gap:8px}.shipment-chat-form input{flex:1;min-width:0;border:1px solid #2a4055;border-radius:11px;background:#080f18;color:#fff;padding:12px;font-size:12px}.shipment-chat-form .primary-btn{white-space:nowrap}
 @media(prefers-reduced-motion:reduce){.route-moving{animation:none}}
+
+.shipment-chat-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.shipment-chat-heading h3{margin:0}
+.shipment-history{margin:0 0 15px}.shipment-history h2{font:800 15px Manrope;margin:0 0 9px}.shipment-history-row{display:block;width:100%;text-align:left;color:#eaf4ff;cursor:pointer}.shipment-history-row p{margin:5px 0;color:#9fb1c3;font-size:11px}.shipment-history-row small{color:#73889d;font-size:10px}
