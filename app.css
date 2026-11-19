@@ -303,3 +303,24 @@ body{font-size:14px}
 .api-note{margin:13px 0 0;color:#a59abf;font-size:10px;line-height:1.55}
 .developer-panel .primary-btn,.developer-panel .secondary-btn{font-size:10px;white-space:nowrap}
 @media(max-width:520px){.developer-head{align-items:flex-start}.developer-head h2{font-size:19px}.api-create-row{align-items:stretch;flex-direction:column}.api-create-row .primary-btn{width:100%}.api-metrics>div{padding:9px}.api-metrics b{font-size:18px}.api-key-row{align-items:flex-start}.api-base-url{align-items:stretch;flex-direction:column}}
+
+
+/* Shipment Journey room */
+.tool-card.shipment{--accent:#48d6e8;--wash:#082a35}
+.shipment-intro{display:flex;align-items:center;gap:15px;padding:17px 19px;margin:0 0 16px;border:1px solid #21485a;border-radius:17px;background:radial-gradient(ellipse at 0 50%,#0e607044,transparent 50%),#0b1520}
+.shipment-intro-icon{width:52px;height:52px;flex:0 0 auto;display:grid;place-items:center;border-radius:15px;background:#10394b;color:#65e5f2;font-size:29px}
+.shipment-intro b{font:800 15px Manrope}.shipment-intro p{margin:5px 0 0;color:#a9b8c8;font-size:12px;line-height:1.55}
+.shipment-form{display:grid;gap:17px}.shipment-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.shipment-fields label{display:grid;gap:7px;color:#cbd8e6;font-size:12px;font-weight:700}
+.shipment-fields input,.shipment-fields select,.shipment-fields textarea{width:100%;min-width:0;border:1px solid #2a3b50;border-radius:11px;background:#080f18;color:#f5f7fb;padding:12px;font:inherit;font-size:13px}
+.shipment-fields textarea{resize:vertical}.shipment-wide{grid-column:1/-1}
+.shipment-upload-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.shipment-upload{position:relative;display:grid;gap:6px;justify-items:center;padding:22px 12px;border:1px dashed #3a6c86;border-radius:15px;background:#0a1722;color:#68d9ec;text-align:center;font-size:24px;cursor:pointer}
+.shipment-upload b{font-size:13px;color:#eaf7ff}.shipment-upload span{font-size:11px;color:#91a5b9}
+.shipment-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.shipment-file-status{font-size:11px;color:#94a8bc}.shipment-disclaimer{margin:0;color:#8293a7;font-size:10px;line-height:1.5}
+.shipment-created{padding:19px;margin:0 0 16px;border:1px solid #267b70;border-radius:17px;background:linear-gradient(145deg,#0d2927,#0b151b)}
+.shipment-kicker{color:#63e4c2;font-size:10px;font-weight:900;letter-spacing:1.5px}.shipment-created h2{font:900 26px Manrope;letter-spacing:1px;margin:7px 0 14px}.shipment-created p{font-size:11px;color:#a7b9c6;margin:12px 0 6px}
+.shipment-share-url{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #284b4b;border-radius:10px;background:#071414}.shipment-share-url code{min-width:0;flex:1;overflow-wrap:anywhere;color:#b9f7e8;font-size:11px}
+.shipment-warning{color:#f2d18b!important;line-height:1.5}
+@media(max-width:600px){.shipment-fields,.shipment-upload-grid{grid-template-columns:1fr}.shipment-wide{grid-column:auto}.shipment-intro{align-items:flex-start;padding:14px}.shipment-share-url{align-items:flex-start}.shipment-share-url button{flex:0 0 auto}}
