@@ -220,3 +220,57 @@ body{font-size:14px}
 
 /* Daily coin reward indicator and claim panel */
 .daily-gift-indicator{display:inline-flex;align-items:center;justify-content:center;color:#ffd36a;background:#47330d;border:1px solid #8a641e;border-radius:7px;padding:3px;margin-left:3px;animation:dailyGiftPulse 1.8s ease-in-out infinite}@keyframes dailyGiftPulse{0%,100%{box-shadow:0 0 0 0 #ffcc5540}50%{box-shadow:0 0 0 5px #ffcc5500}}.daily-claim-card{display:flex;align-items:center;gap:11px;border:1px solid #765b25;background:linear-gradient(110deg,#2a210e,#151a20);border-radius:14px;padding:13px;margin:15px 0}.daily-claim-icon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:12px;background:#493512;color:#ffd66e}.daily-claim-copy{flex:1;min-width:0}.daily-claim-copy b{font-size:12px;color:#ffe2a0}.daily-claim-copy p{font-size:10px;color:#bcae8b;margin:4px 0 0;line-height:1.4}.daily-claim-btn{border:0;border-radius:9px;padding:10px 12px;background:#f3bd4e;color:#251900;font-size:10px;font-weight:900;white-space:nowrap}.daily-claim-btn:disabled{opacity:.55;cursor:not-allowed}
+
+
+/* Annual premium membership — swipeable glass-metal cards */
+.modal-backdrop{z-index:1000}
+.membership-dialog{width:min(100%,760px)!important;max-height:min(90vh,900px);overflow:auto;padding:clamp(18px,4vw,30px)!important;background:radial-gradient(ellipse at 85% 0%,#28204b 0,transparent 38%),linear-gradient(145deg,#10131e,#090b12 70%)!important;border:1px solid #34334c!important;box-shadow:0 30px 100px #000b}
+.membership-modal-head{margin-bottom:18px}
+.membership-kicker{font-size:9px;letter-spacing:2px;font-weight:900;color:#a99aff}
+.membership-modal-head h2{font:800 clamp(25px,5vw,34px) Manrope;margin:8px 0 5px;letter-spacing:-1px}
+.membership-modal-head h2 span{color:#c8a8ff;margin-left:8px}
+.membership-modal-head p{font-size:12px;color:#9ba6ba;margin:0}
+.membership-modal-head p b{color:#f7d47b}
+.membership-active{display:flex;flex-direction:column;gap:4px;padding:13px 15px;margin:15px 0;border:1px solid #357b68;border-radius:14px;background:linear-gradient(100deg,#102b27,#111a20)}
+.membership-active span{font-size:8px;letter-spacing:1.6px;color:#70e7bd;font-weight:900}
+.membership-active b{font:800 18px Manrope;color:#e8fff6}
+.membership-active small{font-size:10px;color:#a6c9bd}
+.membership-inactive{font-size:11px;color:#aeb6c7;padding:12px 14px;margin:15px 0;border:1px solid #2a3041;border-radius:12px;background:#111622}
+.membership-carousel{display:flex;gap:14px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding:4px 3px 18px;margin:0 -2px 4px;scrollbar-width:thin;scrollbar-color:#615b83 transparent}
+.membership-card{position:relative;isolation:isolate;overflow:hidden;flex:0 0 min(82%,310px);min-height:405px;padding:20px 18px 17px;border-radius:23px;scroll-snap-align:center;border:1px solid #555;background:linear-gradient(145deg,#30313b,#11141d 58%,#090b12);box-shadow:0 18px 36px #0008;display:flex;flex-direction:column}
+.membership-card:before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 90% 3%,#fff4,transparent 36%),linear-gradient(120deg,transparent 25%,#ffffff0b 48%,transparent 68%);pointer-events:none}
+.membership-card-glow{position:absolute;z-index:-1;width:180px;height:180px;border-radius:50%;right:-70px;top:55px;filter:blur(42px);opacity:.35;background:#fff}
+.membership-card.gold{background:linear-gradient(145deg,#75521b,#34250f 48%,#14100b);border-color:#b58a3d;color:#fff5d6}
+.membership-card.gold .membership-card-glow{background:#ffc64b;opacity:.5}
+.membership-card.diamond{background:radial-gradient(circle at 78% 22%,#c9f7ff55,transparent 36%),linear-gradient(145deg,#21445c,#142637 48%,#0b111c);border-color:#8bdcf1;color:#e8fbff}
+.membership-card.diamond .membership-card-glow{background:#83e9ff;opacity:.6;animation:diamondAura 3s ease-in-out infinite alternate}
+.membership-card.platinum{background:linear-gradient(145deg,#7a8291,#353b49 42%,#151923 80%);border-color:#c8d1e0;color:#fff}
+.membership-card.platinum .membership-card-glow{background:#d8e7ff;opacity:.5}
+.membership-card.unlimited{background:linear-gradient(145deg,#47356c,#20213d 48%,#0d1020);border-color:#c3a7ff;color:#f5edff}
+.membership-card.unlimited .membership-card-glow{background:#a67cff;opacity:.55}
+.membership-card-top{display:flex;align-items:center;justify-content:space-between}
+.membership-emblem{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:#ffffff20;border:1px solid #ffffff38;font-size:26px;text-shadow:0 0 16px #fff8}
+.membership-year{font-size:8px;font-weight:900;letter-spacing:1.5px;padding:7px 9px;border:1px solid #ffffff55;border-radius:99px;background:#ffffff12}
+.membership-card h3{font:800 25px Manrope;letter-spacing:-.8px;margin:22px 0 2px}
+.membership-price{font:800 27px Manrope;letter-spacing:-1px}
+.membership-price small{font:600 10px "DM Sans";opacity:.72;letter-spacing:0}
+.membership-coins{font-size:10px;font-weight:800;margin:8px 0 15px;padding:8px 10px;border-radius:9px;background:#ffffff16;border:1px solid #ffffff26}
+.membership-card ul{list-style:none;padding:0;margin:0 0 17px;display:grid;gap:9px}
+.membership-card li{display:flex;align-items:flex-start;gap:8px;font-size:10px;line-height:1.35;color:#f1f5ff}
+.membership-card li i{font-style:normal;font-weight:1000;color:#9dffd8}
+.membership-buy{margin-top:auto;width:100%;padding:12px;border:0;border-radius:12px;background:linear-gradient(100deg,#f6d78b,#c38b32);color:#231704;font-size:11px;font-weight:900;box-shadow:0 7px 18px #0004}
+.diamond .membership-buy{background:linear-gradient(100deg,#c6f6ff,#54b8d7);color:#062333}
+.platinum .membership-buy{background:linear-gradient(100deg,#f5f8ff,#aab6c9);color:#151c2a}
+.unlimited .membership-buy{background:linear-gradient(100deg,#e2d0ff,#a47ce8);color:#201039}
+.membership-buy:disabled{opacity:.65}
+.membership-footnote{font-size:9px;color:#7e899e;text-align:center;margin:7px 0 0}
+@keyframes diamondAura{from{transform:scale(.85);opacity:.3}to{transform:scale(1.22);opacity:.8}}
+.membership-card.diamond:after{content:"✧  ✦  ❄  ✧";position:absolute;top:120px;right:13px;color:#d9fbff88;font-size:18px;letter-spacing:8px;animation:diamondDrift 5s ease-in-out infinite}
+@keyframes diamondDrift{0%,100%{transform:translateY(0) rotate(-7deg);opacity:.35}50%{transform:translateY(17px) rotate(8deg);opacity:.9}}
+.wallet-subtitle{font:800 13px Manrope;margin:20px 0 10px}
+.coin-packages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.coin-package{display:flex;flex-direction:column;align-items:center;gap:3px;padding:14px 6px;border:1px solid #3a4260;border-radius:13px;background:linear-gradient(145deg,#171c2e,#0c111c);color:#fff}
+.coin-package b{font:800 19px Manrope;color:#f8d77e}
+.coin-package span{font-size:9px;color:#9ba8bd}
+.coin-package strong{font-size:11px;margin-top:5px}
+@media(max-width:520px){.membership-dialog{width:calc(100% - 20px)!important;padding:17px!important;border-radius:20px!important}.membership-card{flex-basis:86%;min-height:390px}.coin-packages{gap:6px}.coin-package b{font-size:16px}}
