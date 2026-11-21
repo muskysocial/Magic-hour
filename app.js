@@ -418,13 +418,14 @@ let publicSiteConfig = {settings:{},features:[]};
 async function loadPublicSiteConfig(){try{const {data,error}=await supabase.functions.invoke("admin-console",{body:{action:"public_config"}});if(error)throw error;if(data?.error)throw new Error(data.error);publicSiteConfig=data||publicSiteConfig;const brand=String(publicSiteConfig.settings?.brand_name||"Magic Hour");document.title=brand+" | AI Studio";const accent=publicSiteConfig.settings?.accent_color;if(/^#[0-9a-f]{6}$/i.test(accent||""))document.documentElement.style.setProperty("--accent",accent);const icon=publicSiteConfig.settings?.favicon_url;if(icon){const link=document.querySelector('link[rel="icon"]')||document.createElement("link");link.rel="icon";link.href=icon;if(!link.parentNode)document.head.appendChild(link);}const social=publicSiteConfig.settings?.social_image_url;if(social){let meta=document.querySelector('meta[property="og:image"]');if(!meta){meta=document.createElement("meta");meta.setAttribute("property","og:image");document.head.appendChild(meta);}meta.content=social;}render();}catch(error){console.warn("Public site settings unavailable:",error?.message||error);}}
 let adminRoomData = {};
 let adminRoomBusy = false;
+let adminRoomLoading = new Set();
 let adminRoomNotice = "";
 async function loadAdminRoom(room=activeAdminRoom){
- if(!isAdmin||adminRoomBusy)return;
- adminRoomBusy=true;adminRoomNotice="";render();
+ if(!isAdmin||adminRoomLoading.has(room))return;
+ adminRoomLoading.add(room);adminRoomBusy=true;adminRoomNotice="";render();
  try{adminRoomData[room]=await adminConsoleRequest("room_data",{room});}
  catch(error){adminRoomNotice=error?.message||String(error);}
- finally{adminRoomBusy=false;render();}
+ finally{adminRoomLoading.delete(room);adminRoomBusy=adminRoomLoading.size>0;render();}
 }
 function adminRoomTable(rows,columns){
  if(!rows?.length)return '<div class="admin-media-empty">No records found.</div>';
@@ -435,7 +436,7 @@ function renderConnectedAdminRoom(room){
  const head='<section class="admin-room-panel"><div class="admin-room-heading"><div><span class="admin-room-kicker">MAGIC HOUR / CONTROL CENTRE</span><h2>'+esc(room)+'</h2><p>'+esc(data.description||"Manage this area of Magic Hour using live records and server-verified controls.")+'</p></div><span class="admin-room-mark">'+iconSvg(ADMIN_ROOMS.find(x=>x.name===room)?.icon||"settings",25)+'</span></div>';
  const notice=adminRoomNotice?'<div class="admin-upload-notice" role="status">'+esc(adminRoomNotice)+'</div>':"";
  const refresh='<button class="secondary-btn" type="button" data-admin-room-refresh>↻ Refresh</button>';
- if(!data.loaded)return head+notice+'<div class="admin-media-empty">'+(adminRoomBusy?'Loading live records…':'Load this room to view live records.')+'</div>'+refresh+'</section>';
+ if(!data.loaded)return head+notice+'<div class="admin-media-empty">'+(adminRoomLoading.has(room)?'Loading live records…':'Load this room to view live records.')+'</div>'+refresh+'</section>';
  let body="";
  if(room==="Site Features"){
   body='<div class="admin-section-title"><h2>Tool catalogue</h2><span>Visibility and access settings</span></div><div class="admin-room-cards">'+(data.features||[]).map(f=>'<article class="admin-room-card"><div><b>'+esc(f.name)+'</b><p>'+esc(f.description||f.tool_id)+'</p><small>Tool: '+esc(f.tool_id)+'</small><label>Access<select data-feature-tier="'+esc(f.tool_id)+'"><option value="free" '+(f.access_tier==="free"?"selected":"")+'>Free</option><option value="pro" '+(f.access_tier==="pro"?"selected":"")+'>Pro</option><option value="restricted" '+(f.access_tier==="restricted"?"selected":"")+'>Restricted</option></select></label><label>Coin cost<input type="number" min="0" max="100000" data-feature-cost="'+esc(f.tool_id)+'" value="'+Number(f.coin_cost||0)+'"></label></div><label class="admin-toggle"><input type="checkbox" data-feature-enabled="'+esc(f.tool_id)+'" '+(f.enabled?'checked':'')+'> Enabled</label></article>').join('')+'</div>';
