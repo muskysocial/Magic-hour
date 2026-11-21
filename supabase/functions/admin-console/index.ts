@@ -297,7 +297,7 @@ Deno.serve(async (req: Request) => {
         return json({ loaded: true, description: "Actual wallet ledger, Paystack payment orders, API billing records and membership status. Revenue is calculated only from successful payment orders.",
           counts: { transactions: txCount, memberships: memberCount, coins: (wallets.data || []).reduce((n: number, x: any) => n + Number(x.balance || 0), 0), payment_orders: paymentCount, successful_payments: successfulPaymentCount, recent_paid_ngn: recentPaidNgn },
           transactions: (transactions.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })),
-          memberships: (memberships.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })),
+          memberships: (memberships.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id, membership_status: x.unlimited_duration ? "Unlimited" : (x.expires_at && new Date(x.expires_at).getTime() > Date.now() ? "Active" : "Expired") })),
           payments: paymentRows, api_billing: (apiBilling.data || []).map((x:any)=>({...x,email:email.get(x.user_id)||x.user_id})) });
       }
       if (room === "API Centre") {
