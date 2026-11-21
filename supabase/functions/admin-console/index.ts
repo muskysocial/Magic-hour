@@ -251,7 +251,8 @@ Deno.serve(async (req: Request) => {
       }
       if (room === "User Centre") {
         const allAuthUsers = await listAuthUsers();
-        const ids = allAuthUsers.map((u: any) => u.id);
+        const recentUsers = allAuthUsers.slice(0, 100);
+        const ids = recentUsers.map((u: any) => u.id);
         const [wallets, memberships, guests] = await Promise.all([
           ids.length ? admin.from("mh_wallets").select("user_id,balance").in("user_id", ids) : { data: [], error: null },
           ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at").in("user_id", ids) : { data: [], error: null },
@@ -260,11 +261,11 @@ Deno.serve(async (req: Request) => {
         if (wallets.error) throw wallets.error; if (memberships.error) throw memberships.error; if (guests.error) throw guests.error;
         const w = new Map((wallets.data || []).map((x: any) => [x.user_id, x.balance]));
         const m = new Map((memberships.data || []).map((x: any) => [x.user_id, x]));
-        const users = allAuthUsers.map((u: any) => ({ email: u.email || "", created_at: u.created_at,
+        const users = recentUsers.map((u: any) => ({ email: u.email || "", created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at || "Never", wallet_balance: w.get(u.id) ?? 0,
           membership: m.get(u.id)?.plan_name || "Free", confirmed: !!u.email_confirmed_at }));
         return json({ loaded: true, description: "Registered accounts, verification state, wallet balances, memberships and anonymous guest sessions.",
-          users, guests: guests.data || [] });
+          counts: { registered_users: allAuthUsers.length }, users, guests: guests.data || [] });
       }
       if (room === "Finance") {
         const [transactions, memberships, txCount, memberCount, wallets] = await Promise.all([
