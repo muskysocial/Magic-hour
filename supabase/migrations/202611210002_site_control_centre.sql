@@ -136,3 +136,38 @@ create policy "Magic Hour owner reads announcements"
 revoke all on public.mh_site_announcements from anon, authenticated;
 grant select on public.mh_site_announcements to authenticated;
 grant all on public.mh_site_announcements to service_role;
+
+
+-- Client-side health telemetry used by the Site Monitor. Writes are accepted only
+-- through the rate-limited admin-console Edge Function; direct browser reads are
+-- restricted to the site owner.
+create table if not exists public.mh_site_telemetry (
+  id uuid primary key default gen_random_uuid(),
+  visitor_id uuid not null,
+  user_id uuid references auth.users(id),
+  event_type text not null check (event_type in ('javascript_error','unhandled_rejection','page_load')),
+  message text not null default '',
+  stack text not null default '',
+  path text not null default '/',
+  duration_ms integer not null default 0 check (duration_ms between 0 and 600000),
+  user_agent text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists mh_site_telemetry_created_idx on public.mh_site_telemetry(created_at desc);
+create index if not exists mh_site_telemetry_visitor_idx on public.mh_site_telemetry(visitor_id,created_at desc);
+create index if not exists mh_site_telemetry_type_idx on public.mh_site_telemetry(event_type,created_at desc);
+alter table public.mh_site_telemetry enable row level security;
+drop policy if exists "Magic Hour owner reads telemetry" on public.mh_site_telemetry;
+create policy "Magic Hour owner reads telemetry"
+  on public.mh_site_telemetry for select to authenticated
+  using (
+    lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com'
+    and exists (
+      select 1 from public.admin_users a
+      where a.user_id=(select auth.uid())
+        and a.role in ('admin','owner','super_admin')
+    )
+  );
+revoke all on public.mh_site_telemetry from anon, authenticated;
+grant select on public.mh_site_telemetry to authenticated;
+grant all on public.mh_site_telemetry to service_role;
