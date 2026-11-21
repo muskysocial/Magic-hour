@@ -74,3 +74,19 @@ create table if not exists public.mh_feature_experiments (
 alter table public.mh_feature_experiments enable row level security;
 drop policy if exists "Magic Hour owner reads experiments" on public.mh_feature_experiments;
 create policy "Magic Hour owner reads experiments" on public.mh_feature_experiments for select to authenticated using (lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com' and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin')));
+
+create table if not exists public.mh_support_tickets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id),
+  email text not null,
+  subject text not null check (char_length(subject) between 3 and 160),
+  message text not null check (char_length(message) between 5 and 5000),
+  status text not null default 'open' check (status in ('open','in_progress','resolved')),
+  admin_reply text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists mh_support_tickets_created_idx on public.mh_support_tickets(created_at desc);
+alter table public.mh_support_tickets enable row level security;
+drop policy if exists "Magic Hour owner reads support tickets" on public.mh_support_tickets;
+create policy "Magic Hour owner reads support tickets" on public.mh_support_tickets for select to authenticated using (lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com' and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin')));
