@@ -160,7 +160,7 @@ ${renderCampaignPublicPlacements()}
   <div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="orb"></div><span class="spark one">${iconSvg("sparkles",21)}</span><span class="spark two">${iconSvg("sparkles",16)}</span></div>
 </section>
 <form class="chatbar" id="chat-form"><span aria-hidden="true">${iconSvg("sparkles",18)}</span><input id="chat-input" placeholder="Ask magic hour anything..." aria-label="Ask magic hour anything"><button class="send" aria-label="Send message">${iconSvg("send",18)}</button></form>
-<section><div class="section-head"><div><h2>${iconSvg("sparkles",15)} &nbsp;Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ${iconSvg("arrow",13)}</button></div><div class="tools-grid">${tools.map(toolCard).join("")}</div></section>
+<section><div class="section-head"><div><h2>${iconSvg("sparkles",15)} &nbsp;Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ${iconSvg("arrow",13)}</button></div><div class="tools-grid">${tools.filter(t=>publicSiteConfig.features?.find(f=>f.tool_id===t.id)?.enabled!==false).map(toolCard).join("")}</div></section>
 <section class="more-section"><div class="section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button class="text-btn" data-page="All tools">View all ${iconSvg("arrow",13)}</button></div><div class="more-grid">${moreTools.slice(0,7).map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${iconSvg(i,23)}</span><b>${n}</b></button>`).join("")}</div></section>
 <section class="pro-banner"><div class="crown">${iconSvg("crown",32)}</div><div class="pro-copy"><b>Upgrade to Pro</b><p>Get more credits, unlock premium tools and enjoy priority processing.</p></div><button class="pro-button" data-modal="pro">Go Pro ${iconSvg("arrow",13)}</button></section>`;}
 function recentThumbs(kind,selectedId=""){
@@ -382,13 +382,16 @@ const ADMIN_ROOMS = [
  {name:"Finance",icon:"wallet",desc:"Coins, memberships and payment records"},
  {name:"API Centre",icon:"plug",desc:"Connected services, keys and API diagnostics"},
  {name:"Issue Desk",icon:"alert-circle",desc:"Investigate and track site problems"},
- {name:"Campaigns",icon:"megaphone",desc:"Welcome screens, ads and announcements"},
+ {name:"Campaigns",icon:"megaphone",desc:"Welcome screens and media ads"},
+ {name:"Announcements",icon:"bell",desc:"Publish and schedule site notices"},
  {name:"Deployment",icon:"cloud",desc:"GitHub, Vercel builds and releases"},
  {name:"Security",icon:"shield-check",desc:"Admin access, secrets and audit trail"},
  {name:"Backups",icon:"database",desc:"Database and media recovery"}
 ];
 
 // Live Site Control Centre room data and management controls.
+let publicSiteConfig = {settings:{},features:[]};
+async function loadPublicSiteConfig(){try{const {data,error}=await supabase.functions.invoke("admin-console",{body:{action:"public_config"}});if(error)throw error;if(data?.error)throw new Error(data.error);publicSiteConfig=data||publicSiteConfig;render();}catch(error){console.warn("Public site settings unavailable:",error?.message||error);}}
 let adminRoomData = {};
 let adminRoomBusy = false;
 let adminRoomNotice = "";
