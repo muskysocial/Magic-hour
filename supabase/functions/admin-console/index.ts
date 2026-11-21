@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
     if (action === "public_config") {
       const now = new Date().toISOString();
       const [settingsResult, featureResult, announcementResult] = await Promise.all([
-        admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","maintenance_mode"]),
+        admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","maintenance_mode","brand_name","logo_url","favicon_url","accent_color","social_image_url"]),
         admin.from("mh_site_features").select("tool_id,enabled,access_tier,coin_cost,sort_order").order("sort_order"),
         admin.from("announcements").select("id,title,body,starts_at,ends_at").eq("active",true).or("starts_at.is.null,starts_at.lte."+now).or("ends_at.is.null,ends_at.gt."+now).order("created_at",{ascending:false}).limit(5)
       ]);
@@ -259,12 +259,41 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         return json({ loaded: true, description: "Application jobs and release safeguards. Production deployment is not performed by this control.", jobs: data || [] });
       }
+      if (room === "AI Jobs") {
+        const [jobs, queued, running, failed, completed] = await Promise.all([
+          admin.from("mh_video_jobs").select("id,user_id,project_id,status,duration_seconds,credit_cost,error_message,created_at,updated_at").order("created_at",{ascending:false}).limit(100),
+          count("mh_video_jobs",q=>q.eq("status","queued")), count("mh_video_jobs",q=>q.eq("status","processing")),
+          count("mh_video_jobs",q=>q.eq("status","failed")), count("mh_video_jobs",q=>q.eq("status","completed"))
+        ]);
+        if (jobs.error) throw jobs.error;
+        return json({loaded:true,description:"Live video generation queue and recorded outcomes.",counts:{queued,running,failed,completed},jobs:jobs.data||[]});
+      }
+      if (room === "Audit") {
+        const {data,error}=await admin.from("mh_admin_audit_log").select("*").order("created_at",{ascending:false}).limit(200);
+        if(error)throw error;
+        return json({loaded:true,description:"Chronological record of privileged actions.",audit:data||[]});
+      }
+      if (room === "Feature Experiments") {
+        const {data,error}=await admin.from("mh_feature_experiments").select("*").order("created_at",{ascending:false}).limit(100);
+        if(error)throw error;
+        return json({loaded:true,description:"Create controlled feature experiments and set rollout percentages.",experiments:data||[]});
+      }
+      if (room === "Appearance") {
+        const {data,error}=await admin.from("mh_site_settings").select("key,value").in("key",["brand_name","logo_url","favicon_url","accent_color","social_image_url"]);
+        if(error)throw error;
+        return json({loaded:true,description:"Manage public brand assets and theme appearance.",settings:Object.fromEntries((data||[]).map((x:any)=>[x.key,x.value]))});
+      }
+      if (room === "Notifications") {
+        const {data,error}=await admin.from("announcements").select("*").order("created_at",{ascending:false}).limit(100);
+        if(error)throw error;
+        return json({loaded:true,description:"Publish and manage site-wide notices.",announcements:data||[]});
+      }
       if (room === "Backups") return json({ loaded: true, description: "Backup availability is controlled by Supabase project backup settings. No unverified backup or restore is reported as complete.", cards: [["Database backups","Check Supabase project backups and point-in-time recovery in the provider console.","Provider-managed"],["Private media","magic-hour-assets remains private; preserve bucket contents and mh_assets metadata together.","Protected"],["Restore test","A restore test has not been performed by this control centre.","Not verified"]] });
       return json({ loaded: true, description: "This room is reserved for the final Site AI integration.", cards: [["Site AI","Connect only after all other control-centre systems are complete.","Reserved for last"]] });
     }
     if (action === "save_settings") {
       const s = body.settings || {};
-      const entries = Object.entries({ announcement: String(s.announcement || "").slice(0,240), homepage_headline: String(s.homepage_headline || "").slice(0,140), support_email: String(s.support_email || "").slice(0,254), maintenance_mode: !!s.maintenance_mode });
+      const entries = Object.entries({ announcement: String(s.announcement || "").slice(0,240), homepage_headline: String(s.homepage_headline || "").slice(0,140), support_email: String(s.support_email || "").slice(0,254), maintenance_mode: !!s.maintenance_mode, brand_name: String(s.brand_name || "Magic Hour").slice(0,80), logo_url: String(s.logo_url || "").slice(0,2048), favicon_url: String(s.favicon_url || "").slice(0,2048), accent_color: /^#[0-9a-f]{6}$/i.test(String(s.accent_color||"")) ? s.accent_color : "#a879ef", social_image_url: String(s.social_image_url || "").slice(0,2048) });
       for (const [key, value] of entries) {
         const { error } = await admin.from("mh_site_settings").upsert({ key, value, updated_by: (await identify(req))?.id, updated_at: new Date().toISOString() }, { onConflict: "key" });
         if (error) throw error;
