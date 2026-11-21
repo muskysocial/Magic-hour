@@ -100,3 +100,34 @@ grant select on public.mh_site_settings, public.mh_site_features, public.mh_admi
   public.mh_feature_experiments, public.mh_support_tickets to authenticated;
 grant all on public.mh_site_settings, public.mh_site_features, public.mh_admin_audit_log,
   public.mh_feature_experiments, public.mh_support_tickets to service_role;
+
+
+-- Keep Magic Hour announcements isolated from unrelated site/business tables.
+create table if not exists public.mh_site_announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 1 and 120),
+  body text not null check (char_length(body) between 1 and 1000),
+  active boolean not null default true,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (starts_at is null or ends_at is null or ends_at > starts_at)
+);
+create index if not exists mh_site_announcements_active_idx
+  on public.mh_site_announcements(active, created_at desc);
+alter table public.mh_site_announcements enable row level security;
+drop policy if exists "Magic Hour owner reads announcements" on public.mh_site_announcements;
+create policy "Magic Hour owner reads announcements"
+  on public.mh_site_announcements for select to authenticated
+  using (
+    lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com'
+    and exists (
+      select 1 from public.admin_users a
+      where a.user_id=(select auth.uid())
+        and a.role in ('admin','owner','super_admin')
+    )
+  );
+revoke all on public.mh_site_announcements from anon, authenticated;
+grant select on public.mh_site_announcements to authenticated;
+grant all on public.mh_site_announcements to service_role;
