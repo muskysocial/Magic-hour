@@ -41,6 +41,24 @@ async function findAuthUserByEmail(email: string) {
   }
   return null;
 }
+async function findAuthUsersByIds(userIds: string[]) {
+  const wanted = new Set(userIds);
+  const found: any[] = [];
+  if (!wanted.size) return found;
+  for (let page = 1; page <= 20 && wanted.size; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 500 });
+    if (error) throw error;
+    const batch = data.users || [];
+    for (const user of batch) {
+      if (wanted.has(user.id)) {
+        found.push(user);
+        wanted.delete(user.id);
+      }
+    }
+    if (batch.length < 500) break;
+  }
+  return found;
+}
 async function count(table: string, filter?: (q: any) => any) {
   let q = admin.from(table).select("*", { count: "exact", head: true });
   if (filter) q = filter(q);
@@ -250,9 +268,8 @@ Deno.serve(async (req: Request) => {
         ]);
         if (transactions.error) throw transactions.error; if (memberships.error) throw memberships.error; if (wallets.error) throw wallets.error;
         const ids = [...new Set([...(transactions.data || []).map((x: any) => x.user_id), ...(memberships.data || []).map((x: any) => x.user_id)])];
-        const { data: users, error: userError } = ids.length ? await admin.auth.admin.listUsers({ page: 1, perPage: 1000 }) : { data: { users: [] }, error: null };
-        if (userError) throw userError;
-        const email = new Map((users?.users || []).map((u: any) => [u.id, u.email || ""]));
+        const users = await findAuthUsersByIds(ids);
+        const email = new Map(users.map((u: any) => [u.id, u.email || ""]));
         return json({ loaded: true, description: "Actual wallet ledger and membership records; revenue is not estimated from coin movements.",
           counts: { transactions: txCount, memberships: memberCount, coins: (wallets.data || []).reduce((n: number, x: any) => n + Number(x.balance || 0), 0) },
           transactions: (transactions.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })),
