@@ -143,6 +143,20 @@ Deno.serve(async (req: Request) => {
       const settings = Object.fromEntries((settingsResult.data || []).map((x: any) => [x.key, x.value]));
       return json({ settings, features: featureResult.data || [], announcements: announcementResult.data || [] });
     }
+    if (action === "submit_support") {
+      const email=String(body.email||"").trim().toLowerCase();
+      const subject=String(body.subject||"").trim().slice(0,160);
+      const message=String(body.message||"").trim().slice(0,5000);
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||subject.length<3||message.length<5)return json({error:"Enter a valid email, subject and message."},400);
+      const since=new Date(Date.now()-3600000).toISOString();
+      const {count:recent,error:rateError}=await admin.from("mh_support_tickets").select("*",{count:"exact",head:true}).eq("email",email).gte("created_at",since);
+      if(rateError)throw rateError;
+      if((recent||0)>=5)return json({error:"Support request limit reached. Please try again later."},429);
+      const user=await identify(req);
+      const {data,error}=await admin.from("mh_support_tickets").insert({user_id:user?.id||null,email,subject,message}).select("id,created_at,status").single();
+      if(error)throw error;
+      return json({ok:true,ticket:data});
+    }
     await requireAdmin(req);
     if (action === "dashboard") return json(await dashboard());
     if (action === "create_issue") {
@@ -259,6 +273,11 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         return json({ loaded: true, description: "Application jobs and release safeguards. Production deployment is not performed by this control.", jobs: data || [] });
       }
+      if (room === "Support") {
+        const {data,error}=await admin.from("mh_support_tickets").select("*").order("created_at",{ascending:false}).limit(150);
+        if(error)throw error;
+        return json({loaded:true,description:"Customer support requests submitted through the Magic Hour account settings.",tickets:data||[]});
+      }
       if (room === "AI Jobs") {
         const [jobs, queued, running, failed, completed] = await Promise.all([
           admin.from("mh_video_jobs").select("id,user_id,project_id,status,duration_seconds,credit_cost,error_message,created_at,updated_at").order("created_at",{ascending:false}).limit(100),
@@ -348,7 +367,15 @@ Deno.serve(async (req: Request) => {
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.toggle", target: id, details: String(!!body.active) });
       return json({ announcement: data });
     }
-\n    if (action === "save_experiment") {
+\n    if (action === "update_support_ticket") {
+      const id=String(body.id||""),status=String(body.status||"");
+      if(!/^[0-9a-f-]{36}$/i.test(id)||!["open","in_progress","resolved"].includes(status))return json({error:"Invalid ticket update."},400);
+      const {data,error}=await admin.from("mh_support_tickets").update({status,admin_reply:String(body.admin_reply||"").slice(0,5000),updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
+      if(error)throw error;
+      await admin.from("mh_admin_audit_log").insert({actor_user_id:(await identify(req))?.id,actor_email:OWNER_EMAIL,action:"support.update",target:id,details:status});
+      return json({ticket:data});
+    }
+    if (action === "save_experiment") {
       const name = String(body.name || "").trim().slice(0,120);
       const description = String(body.description || "").trim().slice(0,500);
       const traffic = Math.max(0,Math.min(100,Math.trunc(Number(body.traffic_percent)||0)));
