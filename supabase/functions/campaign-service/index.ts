@@ -47,7 +47,7 @@ async function publicCampaigns() {
   const campaigns = await Promise.all((data || []).map(async (row: any) => {
     const asset = Array.isArray(row.mh_assets) ? row.mh_assets[0] : row.mh_assets;
     if (!asset || !["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/quicktime"].includes(asset.mime_type)) return null;
-    const { data: signed, error: signError } = await admin.storage.from("magic-hour-assets").createSignedUrl(asset.storage_path, 300);
+    const { data: signed, error: signError } = await admin.storage.from("magic-hour-assets").createSignedUrl(asset.storage_path, 3600);
     if (signError || !signed?.signedUrl) return null;
     return { id: row.id, title: row.title, message: row.message, link_url: row.link_url,
       placements: row.placements, media_type: asset.mime_type, media_url: signed.signedUrl };
