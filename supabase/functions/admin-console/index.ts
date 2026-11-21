@@ -237,7 +237,7 @@ Deno.serve(async (req: Request) => {
         return json({ loaded: true, description: "Manage the platform-wide Magic Hour configuration.", settings });
       }
       if (room === "Site Monitor") {
-        const since = new Date(Date.now() - 24 * 3600000).toISOString();
+        const since = new Date(Date.now() - 5 * 60000).toISOString();
         const [authUsers, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs] = await Promise.all([
           listAuthUsers(), count("ms_guest_visitors", q => q.is("user_id", null)), count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", since)),
           count("mh_projects"), count("mh_assets"), count("mh_video_jobs", q => q.eq("status", "failed")), count("ms_shipments"),
@@ -245,14 +245,13 @@ Deno.serve(async (req: Request) => {
           admin.from("mh_video_jobs").select("id,status,error_message,updated_at,created_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(30)
         ]);
         if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error;
-        return json({ loaded: true, description: "Measured visitor activity and service records; uninstrumented metrics are not fabricated.",
+        return json({ loaded: true, description: "Live guests seen in the last five minutes, daily visitor records and service metrics; uninstrumented metrics are not fabricated.",
           counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments },
           visitors: visitors.data || [], failed_jobs: jobs.data || [] });
       }
       if (room === "User Centre") {
-        const { data: authData, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 100 });
-        if (authError) throw authError;
-        const ids = (authData.users || []).map((u: any) => u.id);
+        const allAuthUsers = await listAuthUsers();
+        const ids = allAuthUsers.map((u: any) => u.id);
         const [wallets, memberships, guests] = await Promise.all([
           ids.length ? admin.from("mh_wallets").select("user_id,balance").in("user_id", ids) : { data: [], error: null },
           ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at").in("user_id", ids) : { data: [], error: null },
@@ -261,7 +260,7 @@ Deno.serve(async (req: Request) => {
         if (wallets.error) throw wallets.error; if (memberships.error) throw memberships.error; if (guests.error) throw guests.error;
         const w = new Map((wallets.data || []).map((x: any) => [x.user_id, x.balance]));
         const m = new Map((memberships.data || []).map((x: any) => [x.user_id, x]));
-        const users = (authData.users || []).map((u: any) => ({ email: u.email || "", created_at: u.created_at,
+        const users = allAuthUsers.map((u: any) => ({ email: u.email || "", created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at || "Never", wallet_balance: w.get(u.id) ?? 0,
           membership: m.get(u.id)?.plan_name || "Free", confirmed: !!u.email_confirmed_at }));
         return json({ loaded: true, description: "Registered accounts, verification state, wallet balances, memberships and anonymous guest sessions.",
