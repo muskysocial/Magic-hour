@@ -87,6 +87,7 @@ create table if not exists public.mh_support_tickets (
   updated_at timestamptz not null default now()
 );
 create index if not exists mh_support_tickets_created_idx on public.mh_support_tickets(created_at desc);
+create index if not exists mh_support_tickets_email_created_idx on public.mh_support_tickets(email,created_at desc);
 alter table public.mh_support_tickets enable row level security;
 drop policy if exists "Magic Hour owner reads support tickets" on public.mh_support_tickets;
 create policy "Magic Hour owner reads support tickets" on public.mh_support_tickets for select to authenticated using (lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com' and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin')));
