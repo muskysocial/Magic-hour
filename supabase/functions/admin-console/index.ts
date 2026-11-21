@@ -103,7 +103,7 @@ async function dashboard() {
   const ids = allUsers.map(u => u.id);
   const [walletRows, memberRows] = ids.length ? await Promise.all([
     admin.from("mh_wallets").select("user_id,balance").in("user_id", ids),
-    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at").in("user_id", ids)
+    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at").in("user_id", ids).gt("expires_at", now.toISOString())
   ]) : [{ data: [], error: null }, { data: [], error: null }];
   if (walletRows.error) throw walletRows.error;
   if (memberRows.error) throw memberRows.error;
