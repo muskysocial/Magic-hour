@@ -30,8 +30,8 @@ async function requireAdmin(req: Request) {
   if (error || !data || !["admin", "owner", "super_admin"].includes(data.role)) throw new Error("Admin access denied.");
   return user;
 }
-async function listAuthUsers() {
-  const allUsers = await listAuthUsers();
+async function listAuthUsers(): Promise<any[]> {
+  const allUsers: any[] = await listAuthUsers();
   return allUsers;
 }
 async function findAuthUserByEmail(email: string) {
