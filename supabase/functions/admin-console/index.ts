@@ -272,7 +272,7 @@ Deno.serve(async (req: Request) => {
           count("mh_site_telemetry",q=>q.gte("created_at",daySince).eq("event_type","page_load"))
         ]);
         if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error; if(telemetry.error)throw telemetry.error;
-        const pageSamples=(telemetry.data||[]).filter((x:any)=>x.event_type==="page_load").map((x:any)=>Number(x.duration_ms)).filter((x:number)=>Number.isFinite(x)&&x>0);
+        const pageSamples=(telemetry.data||[]).filter((x:any)=>x.event_type==="page_load"&&new Date(x.created_at).getTime()>=Date.now()-24*60*60_000).map((x:any)=>Number(x.duration_ms)).filter((x:number)=>Number.isFinite(x)&&x>0);
         const averagePageLoadMs=pageSamples.length?Math.round(pageSamples.reduce((sum:number,x:number)=>sum+x,0)/pageSamples.length):0;
         const health = [
           { name: "Database", status: "healthy", detail: "Live admin database queries completed" },
