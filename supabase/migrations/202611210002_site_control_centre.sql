@@ -60,3 +60,17 @@ begin
 end; $$;
 revoke all on function public.mh_admin_adjust_wallet(uuid,bigint,text,text) from public,anon,authenticated;
 grant execute on function public.mh_admin_adjust_wallet(uuid,bigint,text,text) to service_role;
+
+create table if not exists public.mh_feature_experiments (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 1 and 120),
+  description text not null default '',
+  enabled boolean not null default false,
+  traffic_percent integer not null default 0 check (traffic_percent between 0 and 100),
+  variants jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.mh_feature_experiments enable row level security;
+drop policy if exists "Magic Hour owner reads experiments" on public.mh_feature_experiments;
+create policy "Magic Hour owner reads experiments" on public.mh_feature_experiments for select to authenticated using (lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com' and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin')));
