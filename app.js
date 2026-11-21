@@ -337,7 +337,7 @@ function renderDeveloperPanel(){
 
 async function refreshAdminAccess(){
  if(!currentUser){isAdmin=false;return false;}
- try{const {data,error}=await supabase.from("admin_users").select("role").eq("user_id",currentUser.id).maybeSingle();isAdmin=!error&&!!data&&["admin","owner","super_admin"].includes(data.role);return isAdmin;}
+ try{const {data,error}=await supabase.from("admin_users").select("role").eq("user_id",currentUser.id).maybeSingle();isAdmin=!error&&!!data&&["admin","owner","super_admin"].includes(data.role)&&(currentUser.email||"").toLowerCase()==="ugohjeremiah16@gmail.com";return isAdmin;}
  catch{isAdmin=false;return false;}
 }
 function visitorSessionId(){
