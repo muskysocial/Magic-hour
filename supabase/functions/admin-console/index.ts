@@ -87,7 +87,7 @@ async function dashboard() {
   ] = await Promise.all([
     count("mh_profiles"), count("mh_projects"), count("mh_assets"), count("mh_video_jobs"),
     count("mh_video_jobs", q => q.eq("status", "failed")),
-    count("ms_shipments"), count("mh_wallet_transactions"), count("mh_memberships", q => q.gt("expires_at", new Date().toISOString())),
+    count("ms_shipments"), count("mh_wallet_transactions"), count("mh_memberships", q => q.or("expires_at.is.null,expires_at.gt."+new Date().toISOString())),
     count("ms_guest_visitors", q => q.gte("last_seen_at", activeSince)),
     count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", daySince)),
     count("ms_guest_visitors", q => q.is("user_id", null)),
@@ -103,7 +103,7 @@ async function dashboard() {
   const ids = allUsers.map(u => u.id);
   const [walletRows, memberRows] = ids.length ? await Promise.all([
     admin.from("mh_wallets").select("user_id,balance").in("user_id", ids),
-    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at").in("user_id", ids).gt("expires_at", now.toISOString())
+    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at,unlimited_duration").in("user_id", ids).or("expires_at.is.null,expires_at.gt."+now.toISOString())
   ]) : [{ data: [], error: null }, { data: [], error: null }];
   if (walletRows.error) throw walletRows.error;
   if (memberRows.error) throw memberRows.error;
@@ -264,7 +264,7 @@ Deno.serve(async (req: Request) => {
         const ids = recentUsers.map((u: any) => u.id);
         const [wallets, memberships, guests] = await Promise.all([
           ids.length ? admin.from("mh_wallets").select("user_id,balance").in("user_id", ids) : { data: [], error: null },
-          ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at").in("user_id", ids).gt("expires_at", new Date().toISOString()) : { data: [], error: null },
+          ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at,unlimited_duration").in("user_id", ids).or("expires_at.is.null,expires_at.gt."+new Date().toISOString()) : { data: [], error: null },
           admin.from("ms_guest_visitors").select("visitor_id,last_path,visits,last_seen_at").is("user_id", null).order("last_seen_at", { ascending: false }).limit(100)
         ]);
         if (wallets.error) throw wallets.error; if (memberships.error) throw memberships.error; if (guests.error) throw guests.error;
@@ -427,14 +427,15 @@ Deno.serve(async (req: Request) => {
       const target = await findAuthUserByEmail(email);
       if (!target) return json({ error: "No registered account was found for that email." }, 404);
       const now = new Date();
-      const { data: currentMembership, error: currentMembershipError } = await admin.from("mh_memberships").select("started_at,expires_at").eq("user_id",target.id).maybeSingle();
+      const { data: currentMembership, error: currentMembershipError } = await admin.from("mh_memberships").select("started_at,expires_at,unlimited_duration").eq("user_id",target.id).maybeSingle();
       if (currentMembershipError) throw currentMembershipError;
       const currentExpiry = currentMembership?.expires_at ? new Date(currentMembership.expires_at) : null;
-      const isActive = !!currentExpiry && currentExpiry.getTime() > now.getTime();
-      const renewalBase = isActive ? currentExpiry! : now;
+      const isActive = !!currentMembership && (!!currentMembership.unlimited_duration || (!!currentExpiry && currentExpiry.getTime() > now.getTime()));
+      const isUnlimitedDuration = !!body.unlimited_duration || (isActive && !!currentMembership?.unlimited_duration);
+      const renewalBase = isActive && currentExpiry ? currentExpiry : now;
       const expires = new Date(renewalBase.getTime() + days * 86400000);
       const startedAt = isActive && currentMembership?.started_at ? currentMembership.started_at : now.toISOString();
-      const { data, error } = await admin.from("mh_memberships").upsert({ user_id: target.id, plan_key: plan.toLowerCase().replace(/[^a-z0-9]+/g,"-"), plan_name: plan, started_at: startedAt, expires_at: expires.toISOString(), unlimited_generations: !!body.unlimited_generations, unlimited_duration: !!body.unlimited_duration, updated_at: now.toISOString() }, { onConflict: "user_id" }).select("*").single();
+      const { data, error } = await admin.from("mh_memberships").upsert({ user_id: target.id, plan_key: plan.toLowerCase().replace(/[^a-z0-9]+/g,"-"), plan_name: plan, started_at: startedAt, expires_at: isUnlimitedDuration ? null : expires.toISOString(), unlimited_generations: !!body.unlimited_generations, unlimited_duration: isUnlimitedDuration, updated_at: now.toISOString() }, { onConflict: "user_id" }).select("*").single();
       if (error) throw error;
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "membership.grant", target: target.id, details: plan + " for " + days + " days" });
       return json({ membership: data });
