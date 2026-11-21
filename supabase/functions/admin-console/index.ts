@@ -444,7 +444,7 @@ Deno.serve(async (req: Request) => {
       if (currentMembershipError) throw currentMembershipError;
       const currentExpiry = currentMembership?.expires_at ? new Date(currentMembership.expires_at) : null;
       const isActive = !!currentMembership && (!!currentMembership.unlimited_duration || (!!currentExpiry && currentExpiry.getTime() > now.getTime()));
-      const isUnlimitedDuration = !!body.unlimited_duration || (isActive && !!currentMembership?.unlimited_duration);
+      const isUnlimitedDuration = body.unlimited_duration === true;
       const renewalBase = isActive && currentExpiry ? currentExpiry : now;
       const expires = new Date(renewalBase.getTime() + days * 86400000);
       const startedAt = isActive && currentMembership?.started_at ? currentMembership.started_at : now.toISOString();
