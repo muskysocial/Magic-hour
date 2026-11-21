@@ -5,6 +5,7 @@ create table if not exists public.mh_site_settings (
   updated_by uuid references auth.users(id),
   updated_at timestamptz not null default now()
 );
+create index if not exists mh_site_settings_updated_by_idx on public.mh_site_settings(updated_by);
 create table if not exists public.mh_site_features (
   tool_id text primary key,
   name text not null default '',
@@ -25,6 +26,7 @@ create table if not exists public.mh_admin_audit_log (
   created_at timestamptz not null default now()
 );
 create index if not exists mh_admin_audit_log_created_idx on public.mh_admin_audit_log(created_at desc);
+create index if not exists mh_admin_audit_log_actor_idx on public.mh_admin_audit_log(actor_user_id);
 alter table public.mh_site_settings enable row level security;
 alter table public.mh_site_features enable row level security;
 alter table public.mh_admin_audit_log enable row level security;
@@ -88,13 +90,20 @@ create table if not exists public.mh_support_tickets (
 );
 create index if not exists mh_support_tickets_created_idx on public.mh_support_tickets(created_at desc);
 create index if not exists mh_support_tickets_email_created_idx on public.mh_support_tickets(email,created_at desc);
+create index if not exists mh_support_tickets_user_created_idx on public.mh_support_tickets(user_id,created_at desc);
 alter table public.mh_support_tickets enable row level security;
 drop policy if exists "Magic Hour owner reads support tickets" on public.mh_support_tickets;
-create policy "Magic Hour owner reads support tickets" on public.mh_support_tickets for select to authenticated using (lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com' and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin')));
 drop policy if exists "Users read their own Magic Hour support tickets" on public.mh_support_tickets;
-create policy "Users read their own Magic Hour support tickets"
+drop policy if exists "Magic Hour support ticket readers" on public.mh_support_tickets;
+create policy "Magic Hour support ticket readers"
   on public.mh_support_tickets for select to authenticated
-  using (user_id = (select auth.uid()));
+  using (
+    user_id = (select auth.uid())
+    or (
+      lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com'
+      and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin'))
+    )
+  );
 
 -- Browser reads are restricted by RLS: admin-only control records stay owner-only,
 -- while signed-in customers can read only their own support tickets. Privileged writes
@@ -136,3 +145,39 @@ create policy "Magic Hour owner reads announcements"
 revoke all on public.mh_site_announcements from anon, authenticated;
 grant select on public.mh_site_announcements to authenticated;
 grant all on public.mh_site_announcements to service_role;
+
+
+-- Client-side health telemetry used by the Site Monitor. Writes are accepted only
+-- through the rate-limited admin-console Edge Function; direct browser reads are
+-- restricted to the site owner.
+create table if not exists public.mh_site_telemetry (
+  id uuid primary key default gen_random_uuid(),
+  visitor_id uuid not null,
+  user_id uuid references auth.users(id),
+  event_type text not null check (event_type in ('javascript_error','unhandled_rejection','page_load')),
+  message text not null default '',
+  stack text not null default '',
+  path text not null default '/',
+  duration_ms integer not null default 0 check (duration_ms between 0 and 600000),
+  user_agent text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists mh_site_telemetry_created_idx on public.mh_site_telemetry(created_at desc);
+create index if not exists mh_site_telemetry_visitor_idx on public.mh_site_telemetry(visitor_id,created_at desc);
+create index if not exists mh_site_telemetry_type_idx on public.mh_site_telemetry(event_type,created_at desc);
+create index if not exists mh_site_telemetry_user_created_idx on public.mh_site_telemetry(user_id,created_at desc);
+alter table public.mh_site_telemetry enable row level security;
+drop policy if exists "Magic Hour owner reads telemetry" on public.mh_site_telemetry;
+create policy "Magic Hour owner reads telemetry"
+  on public.mh_site_telemetry for select to authenticated
+  using (
+    lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com'
+    and exists (
+      select 1 from public.admin_users a
+      where a.user_id=(select auth.uid())
+        and a.role in ('admin','owner','super_admin')
+    )
+  );
+revoke all on public.mh_site_telemetry from anon, authenticated;
+grant select on public.mh_site_telemetry to authenticated;
+grant all on public.mh_site_telemetry to service_role;
