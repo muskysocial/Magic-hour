@@ -543,3 +543,9 @@ body{font-size:14px}
 .admin-campaign-row .secondary-btn{flex:0 0 auto;white-space:nowrap}
 .admin-campaign-row small{overflow-wrap:anywhere}
 .admin-room-panel [data-admin-issue],.admin-room-panel [data-support-ticket]{width:100%}
+
+
+/* Public site notices and support contact */
+.site-announcement-banner{margin:0 0 18px;padding:12px 16px;border:1px solid rgba(168,121,239,.35);border-radius:14px;background:rgba(168,121,239,.10);color:var(--text);font-size:14px;line-height:1.5}
+.support-contact-line{margin:12px 0;color:var(--muted);font-size:13px}
+.support-contact-line a{color:var(--blue);text-decoration:none}
