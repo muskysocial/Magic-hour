@@ -359,6 +359,25 @@ async function adminConsoleRequest(action,payload={}){
  const {data,error}=await supabase.functions.invoke("admin-console",{body:{action,...payload}});
  if(error)throw error;if(data?.error)throw new Error(data.error);return data;
 }
+function sendSiteTelemetry(eventType,message="",stack="",durationMs=0){
+ try{
+  const visitorId=visitorSessionId();
+  supabase.functions.invoke("admin-console",{body:{action:"telemetry",visitor_id:visitorId,event_type:eventType,message:String(message||"").slice(0,1000),stack:String(stack||"").slice(0,4000),path:location.pathname+location.search,duration_ms:durationMs}})
+   .then(({error,data})=>{if(error||data?.error)console.warn("Site telemetry:",error?.message||data?.error||"unavailable");})
+   .catch(error=>console.warn("Site telemetry:",error?.message||error));
+ }catch(error){console.warn("Site telemetry:",error?.message||error);}
+}
+window.addEventListener("error",event=>{
+ if(event.message)sendSiteTelemetry("javascript_error",event.message,event.error?.stack||"");
+});
+window.addEventListener("unhandledrejection",event=>{
+ const reason=event.reason;sendSiteTelemetry("unhandled_rejection",reason?.message||String(reason||"Unhandled promise rejection"),reason?.stack||"");
+});
+window.addEventListener("load",()=>{
+ const nav=performance.getEntriesByType("navigation")[0];
+ if(nav)sendSiteTelemetry("page_load","Page load completed","",Math.round(nav.loadEventEnd||nav.duration||0));
+},{once:true});
+
 async function campaignServiceRequest(action,payload={}){const {data,error}=await supabase.functions.invoke("campaign-service",{body:{action,...payload}});if(error)throw error;if(data?.error)throw new Error(data.error);return data;}
 async function loadAdminCampaigns(){if(!isAdmin||adminCampaignLoading)return;adminCampaignLoading=true;adminCampaignNotice="";render();try{const data=await campaignServiceRequest("list_admin");adminCampaigns=data.campaigns||[];}catch(error){adminCampaignNotice="Campaign service not deployed or unavailable: "+(error?.message||String(error));}finally{adminCampaignLoading=false;render();}}
 async function loadPublicCampaigns(){try{const data=await campaignServiceRequest("list_public");publicCampaigns=data.campaigns||[];publicCampaignsLoaded=true;render();}catch(error){publicCampaignsLoaded=true;console.warn("Campaign delivery unavailable:",error?.message||error);}}
@@ -444,7 +463,7 @@ function renderConnectedAdminRoom(room){
  }else if(room==="Site Settings"){
   body='<form id="admin-settings-form" class="admin-campaign-form"><h3>Platform settings</h3><label>Site announcement<input name="announcement" value="'+esc(data.settings?.announcement||'')+'" maxlength="240"></label><label>Homepage headline<input name="homepage_headline" value="'+esc(data.settings?.homepage_headline||'')+'" maxlength="140"></label><label>Support email<input name="support_email" value="'+esc(data.settings?.support_email||'')+'" type="email"></label><label class="admin-campaign-placements"><span><input type="checkbox" name="maintenance_mode" '+(data.settings?.maintenance_mode?'checked':'')+'> Maintenance mode (admin access remains available)</span></label><button class="primary-btn" type="submit">Save platform settings</button></form>';
  }else if(room==="Site Monitor"){
-  body='<div class="admin-section-title"><h2>Service health</h2></div><div class="admin-room-cards">'+(data.health||[]).map(h=>'<article class="admin-room-card"><div><b>'+esc(h.name)+'</b><p>'+esc(h.detail)+'</p></div><span class="admin-room-status">'+esc(h.status)+'</span></article>').join('')+'</div><div class="admin-stat-grid">'+[['Registered users',data.counts?.users],['Guest sessions',data.counts?.guests],['Live guests (5m)',data.counts?.active_guests],['Projects',data.counts?.projects],['Assets',data.counts?.assets],['Failed jobs',data.counts?.failed_jobs],['Shipments',data.counts?.shipments]].map(x=>'<div class="admin-stat"><span>'+x[0]+'</span><b>'+Number(x[1]||0).toLocaleString()+'</b><small>Live database count</small></div>').join('')+'</div><div class="admin-section-title"><h2>Recent visitor sessions</h2><span>Latest 50 tracked sessions</span></div>'+adminRoomTable(data.visitors,[['visitor_id','Visitor ID'],['user_id','User ID'],['last_path','Last page'],['visits','Visits'],['last_seen_at','Last seen']])+'<div class="admin-section-title"><h2>Recent failed jobs</h2></div>'+adminRoomTable(data.failed_jobs,[['id','Job'],['status','Status'],['error_message','Error'],['updated_at','Updated']]);
+  body='<div class="admin-section-title"><h2>Service health</h2></div><div class="admin-room-cards">'+(data.health||[]).map(h=>'<article class="admin-room-card"><div><b>'+esc(h.name)+'</b><p>'+esc(h.detail)+'</p></div><span class="admin-room-status">'+esc(h.status)+'</span></article>').join('')+'</div><div class="admin-stat-grid">'+[['Registered users',data.counts?.users],['Guest sessions',data.counts?.guests],['Live guests (5m)',data.counts?.active_guests],['Client errors (24h)',data.counts?.client_errors_24h],['Page loads (24h)',data.counts?.page_loads_24h],['Projects',data.counts?.projects],['Assets',data.counts?.assets],['Failed jobs',data.counts?.failed_jobs],['Shipments',data.counts?.shipments]].map(x=>'<div class="admin-stat"><span>'+x[0]+'</span><b>'+Number(x[1]||0).toLocaleString()+'</b><small>Live database count</small></div>').join('')+'</div><div class="admin-section-title"><h2>Recent visitor sessions</h2><span>Latest 50 tracked sessions</span></div>'+adminRoomTable(data.visitors,[['visitor_id','Visitor ID'],['user_id','User ID'],['last_path','Last page'],['visits','Visits'],['last_seen_at','Last seen']])+'<div class="admin-section-title"><h2>Recent client events</h2><span>Latest 100 browser events and page-load measurements</span></div>'+adminRoomTable(data.telemetry,[['created_at','Date'],['event_type','Event'],['message','Message'],['path','Page'],['duration_ms','Load ms']])+'<div class="admin-section-title"><h2>Recent failed jobs</h2></div>'+adminRoomTable(data.failed_jobs,[['id','Job'],['status','Status'],['error_message','Error'],['updated_at','Updated']]);
  }else if(room==="User Centre"){
   body='<div class="admin-section-title"><h2>Registered accounts</h2><span>Showing '+(data.users||[]).length+' of '+Number(data.counts?.registered_users||0).toLocaleString()+' accounts</span></div><input id="admin-user-search" class="admin-user-search" type="search" placeholder="Search account email, membership or verification status">'+adminRoomTable(data.users,[['email','Email'],['created_at','Joined'],['last_sign_in_at','Last sign-in'],['wallet_balance','Coins'],['membership','Membership'],['confirmed','Email verified']])+'<div class="admin-section-title"><h2>Guest visitors</h2><span>Recent sessions</span></div>'+adminRoomTable(data.guests,[['visitor_id','Visitor ID'],['last_path','Last page'],['visits','Visits'],['last_seen_at','Last seen']]);
  }else if(room==="Finance"){
