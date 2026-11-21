@@ -956,4 +956,5 @@ function renderCampaignPublicPlacements(){
 }
 
 render();
+loadPublicSiteConfig();
 loadPublicCampaigns();
