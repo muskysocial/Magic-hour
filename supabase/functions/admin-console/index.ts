@@ -272,7 +272,7 @@ Deno.serve(async (req: Request) => {
     if (action === "set_feature") {
       const tool = String(body.tool_id || "").slice(0,80);
       if (!/^[a-z0-9-]+$/i.test(tool)) return json({ error: "Invalid tool identifier." }, 400);
-      const { error } = await admin.from("mh_site_features").upsert({ tool_id: tool, enabled: !!body.enabled, access_tier: ["free","pro","restricted"].includes(body.access_tier) ? body.access_tier : "free", coin_cost: Math.max(0, Math.min(100000, Number(body.coin_cost) || 0)), updated_at: new Date().toISOString() }, { onConflict: "tool_id" });
+      const { data: currentFeature, error: currentFeatureError } = await admin.from("mh_site_features").select("enabled,access_tier,coin_cost").eq("tool_id",tool).maybeSingle();\n      if (currentFeatureError) throw currentFeatureError;\n      const featureUpdate = { tool_id: tool, enabled: typeof body.enabled === "boolean" ? body.enabled : (currentFeature?.enabled ?? true), access_tier: ["free","pro","restricted"].includes(body.access_tier) ? body.access_tier : (currentFeature?.access_tier || "free"), coin_cost: body.coin_cost !== undefined ? Math.max(0, Math.min(100000, Number(body.coin_cost) || 0)) : (currentFeature?.coin_cost || 0), updated_at: new Date().toISOString() };\n      const { error } = await admin.from("mh_site_features").upsert(featureUpdate, { onConflict: "tool_id" });
       if (error) throw error;
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "feature.toggle", target: tool, details: String(!!body.enabled) });
       return json({ ok: true });
