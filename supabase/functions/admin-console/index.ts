@@ -277,7 +277,46 @@ Deno.serve(async (req: Request) => {
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "feature.toggle", target: tool, details: String(!!body.enabled) });
       return json({ ok: true });
     }
-    if (action === "save_announcement") {
+
+    if (action === "adjust_wallet") {
+      const email = String(body.email || "").trim().toLowerCase();
+      const amount = Math.trunc(Number(body.amount));
+      const description = String(body.description || "Admin wallet adjustment").trim().slice(0,240);
+      if (!email || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) > 100000000) return json({ error: "Enter a valid account email and a non-zero coin amount." }, 400);
+      const { data: authData, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (authError) throw authError;
+      const target = (authData.users || []).find((u: any) => (u.email || "").toLowerCase() === email);
+      if (!target) return json({ error: "No registered account was found for that email." }, 404);
+      const reference = "admin-" + crypto.randomUUID();
+      const { data: balance, error } = await admin.rpc("mh_admin_adjust_wallet", { p_user_id: target.id, p_amount: amount, p_description: description, p_reference: reference });
+      if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "wallet.adjust", target: target.id, details: amount + " coins: " + description });
+      return json({ ok: true, balance, reference });
+    }
+    if (action === "grant_membership") {
+      const email = String(body.email || "").trim().toLowerCase();
+      const plan = String(body.plan_name || "").trim().slice(0,80);
+      const days = Math.max(1, Math.min(3650, Math.trunc(Number(body.days) || 30)));
+      if (!email || !plan) return json({ error: "Account email and plan name are required." }, 400);
+      const { data: authData, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (authError) throw authError;
+      const target = (authData.users || []).find((u: any) => (u.email || "").toLowerCase() === email);
+      if (!target) return json({ error: "No registered account was found for that email." }, 404);
+      const now = new Date(), expires = new Date(now.getTime() + days * 86400000);
+      const { data, error } = await admin.from("mh_memberships").upsert({ user_id: target.id, plan_key: plan.toLowerCase().replace(/[^a-z0-9]+/g,"-"), plan_name: plan, started_at: now.toISOString(), expires_at: expires.toISOString(), unlimited_generations: !!body.unlimited_generations, unlimited_duration: !!body.unlimited_duration, updated_at: now.toISOString() }, { onConflict: "user_id" }).select("*").single();
+      if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "membership.grant", target: target.id, details: plan + " for " + days + " days" });
+      return json({ membership: data });
+    }
+    if (action === "update_announcement") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid announcement." }, 400);
+      const { data, error } = await admin.from("announcements").update({ active: !!body.active }).eq("id", id).select("*").single();
+      if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.toggle", target: id, details: String(!!body.active) });
+      return json({ announcement: data });
+    }
+\n    if (action === "save_announcement") {
       const title = String(body.title || "").trim().slice(0,120), message = String(body.body || "").trim().slice(0,1000);
       if (!title || !message) return json({ error: "Announcement title and message are required." }, 400);
       const starts = body.starts_at ? new Date(String(body.starts_at)).toISOString() : null;
