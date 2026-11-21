@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
       if (!placements.length || placements.some((p: string) => !["welcome","homepage"].includes(p))) return json({ error: "Choose a valid campaign placement." }, 400);
       const { data: asset, error: assetError } = await admin.from("mh_assets")
         .select("id,user_id,mime_type,storage_path").eq("id", assetId).eq("user_id", user.id).maybeSingle();
-      if (assetError || !asset) return json({ error: "Choose a media file from your admin uploads." }, 400);
+      if (assetError || !asset || !asset.storage_path?.startsWith(user.id + "/site-media/")) return json({ error: "Choose a media file from the Site Uploads library." }, 400);
       if (!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/quicktime"].includes(asset.mime_type)) return json({ error: "Campaign media must be an image or video." }, 400);
       const startsAt = validDate(body.starts_at) || new Date().toISOString();
       const endsAt = validDate(body.ends_at);
