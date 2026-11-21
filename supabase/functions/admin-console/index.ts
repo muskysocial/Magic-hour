@@ -81,12 +81,13 @@ async function dashboard() {
     confirmed: !!u.email_confirmed_at, wallet_balance: wallets.get(u.id) ?? 0,
     membership: members.get(u.id) || null
   }));
+  const storageProbe = await admin.storage.from("magic-hour-assets").list("", { limit: 1 });
   const health = [
-    { name: "Database", status: "healthy", detail: "Admin database queries responding" },
-    { name: "Authentication", status: "healthy", detail: "Supabase Auth admin API responding" },
-    { name: "Storage", status: "unknown", detail: "Storage bucket availability is not yet actively probed" },
-    { name: "AI generation", status: failedJobs > 0 ? "warning" : "healthy", detail: failedJobs + " failed video jobs recorded" },
-    { name: "Shipment tracking", status: "healthy", detail: shipments + " shipment records" }
+    { name: "Database", status: "healthy", detail: "Admin database queries responded successfully" },
+    { name: "Authentication", status: "healthy", detail: "Supabase Auth admin API responded successfully" },
+    { name: "Private storage", status: storageProbe.error ? "warning" : "healthy", detail: storageProbe.error ? "Private media bucket probe failed: " + storageProbe.error.message : "Private media bucket is reachable" },
+    { name: "AI generation", status: failedJobs > 0 ? "warning" : "unknown", detail: failedJobs + " failed video jobs in recorded history; provider availability is not directly probed" },
+    { name: "Shipment tracking", status: "healthy", detail: shipments + " shipment records are accessible" }
   ];
   return {
     generated_at: now.toISOString(),
@@ -180,6 +181,7 @@ Deno.serve(async (req: Request) => {
         admin_notes: String(body.admin_notes || "").slice(0, 5000)
       }).eq("id", id).select("*").single();
       if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "issue.update", target: id, details: status });
       return json({ issue: data });
     }
 
