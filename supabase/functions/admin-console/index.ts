@@ -169,7 +169,7 @@ Deno.serve(async (req: Request) => {
       const [settingsResult, featureResult, announcementResult] = await Promise.all([
         admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","support_email","maintenance_mode","brand_name","logo_url","favicon_url","accent_color","social_image_url"]),
         admin.from("mh_site_features").select("tool_id,enabled,access_tier,coin_cost,sort_order").order("sort_order"),
-        admin.from("announcements").select("id,title,body,starts_at,ends_at,created_at").eq("active",true).order("created_at",{ascending:false}).limit(100)
+        admin.from("mh_site_announcements").select("id,title,body,starts_at,ends_at,created_at").eq("active",true).order("created_at",{ascending:false}).limit(100)
       ]);
       if (settingsResult.error) throw settingsResult.error;
       if (featureResult.error) throw featureResult.error;
@@ -306,7 +306,7 @@ Deno.serve(async (req: Request) => {
         return json({ loaded: true, description: "Operational issue register and resolution history.", issues: data || [] });
       }
       if (room === "Announcements") {
-        const { data, error } = await admin.from("announcements").select("*").order("created_at", { ascending: false }).limit(100);
+        const { data, error } = await admin.from("mh_site_announcements").select("*").order("created_at", { ascending: false }).limit(100);
         if (error) throw error;
         return json({ loaded: true, description: "Manage text announcements and media campaigns.", announcements: data || [] });
       }
@@ -442,7 +442,7 @@ Deno.serve(async (req: Request) => {
     if (action === "update_announcement") {
       const id = String(body.id || "");
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid announcement." }, 400);
-      const { data, error } = await admin.from("announcements").update({ active: !!body.active }).eq("id", id).select("*").single();
+      const { data, error } = await admin.from("mh_site_announcements").update({ active: !!body.active, updated_at: new Date().toISOString() }).eq("id", id).select("*").single();
       if (error) throw error;
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.toggle", target: id, details: String(!!body.active) });
       return json({ announcement: data });
@@ -493,7 +493,7 @@ Deno.serve(async (req: Request) => {
       const starts = startDate ? startDate.toISOString() : null;
       const ends = endDate ? endDate.toISOString() : null;
       if (starts && ends && new Date(ends) <= new Date(starts)) return json({ error: "End date must be after start date." }, 400);
-      const { data, error } = await admin.from("announcements").insert({ title, body: message, active: true, starts_at: starts, ends_at: ends }).select("*").single();
+      const { data, error } = await admin.from("mh_site_announcements").insert({ title, body: message, active: true, starts_at: starts, ends_at: ends }).select("*").single();
       if (error) throw error;
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.create", target: data.id, details: title });
       return json({ announcement: data });
