@@ -260,7 +260,7 @@ Deno.serve(async (req: Request) => {
       }
       if (room === "API Centre") {
         const [keys, usage] = await Promise.all([
-          admin.from("ms_api_keys").select("name,key_prefix,created_at,last_used_at,revoked_at").order("created_at", { ascending: false }).limit(100),
+          admin.from("ms_api_keys").select("id,user_id,name,key_prefix,created_at,last_used_at,revoked_at").order("created_at", { ascending: false }).limit(100),
           admin.from("ms_api_usage").select("created_at,endpoint,http_method,status_code").order("created_at", { ascending: false }).limit(100)
         ]);
         if (keys.error) throw keys.error; if (usage.error) throw usage.error;
@@ -398,6 +398,15 @@ Deno.serve(async (req: Request) => {
       return json({ announcement: data });
     }
 
+    if (action === "revoke_api_key") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid API key." }, 400);
+      const { data, error } = await admin.from("ms_api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", id).is("revoked_at", null).select("id,name").maybeSingle();
+      if (error) throw error;
+      if (!data) return json({ error: "API key was not found or is already revoked." }, 404);
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "api_key.revoke", target: id, details: data.name });
+      return json({ ok: true, key: data });
+    }
     if (action === "update_support_ticket") {
       const id=String(body.id||""),status=String(body.status||"");
       if(!/^[0-9a-f-]{36}$/i.test(id)||!["open","in_progress","resolved"].includes(status))return json({error:"Invalid ticket update."},400);
