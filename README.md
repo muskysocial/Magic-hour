@@ -1,4 +1,4 @@
-# MuskySocials — clean rebuild
+# Magic Hour AI Studio — clean rebuild
 
 The previous website front end has been cleared from this branch. This is a blank starting point for the new website.
 
