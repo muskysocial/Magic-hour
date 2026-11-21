@@ -1,0 +1,288 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const cors = {
+  "Access-Control-Allow-Origin": "https://magichour-black.vercel.app",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin"
+};
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+const url = Deno.env.get("SUPABASE_URL")!;
+const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const OWNER_EMAIL = "ugohjeremiah16@gmail.com";
+const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+
+async function identify(req: Request) {
+  const header = req.headers.get("Authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!token) return null;
+  const client = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await client.auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user;
+}
+async function requireAdmin(req: Request) {
+  const user = await identify(req);
+  if (!user) throw new Error("Sign in required.");
+  if ((user.email || "").toLowerCase() !== OWNER_EMAIL) throw new Error("Admin access denied.");
+  const { data, error } = await admin.from("admin_users").select("role").eq("user_id", user.id).maybeSingle();
+  if (error || !data || !["admin", "owner", "super_admin"].includes(data.role)) throw new Error("Admin access denied.");
+  return user;
+}
+async function count(table: string, filter?: (q: any) => any) {
+  let q = admin.from(table).select("*", { count: "exact", head: true });
+  if (filter) q = filter(q);
+  const { count: n, error } = await q;
+  if (error) throw error;
+  return n || 0;
+}
+async function dashboard() {
+  const now = new Date();
+  const activeSince = new Date(now.getTime() - 5 * 60_000).toISOString();
+  const daySince = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+  const [
+    profiles, projects, assets, jobs, failedJobs, shipments, transactions, memberships,
+    visitorActive, guests24h, guestsTotal, recentVisitors, issuesResult, failedRecent
+  ] = await Promise.all([
+    count("mh_profiles"), count("mh_projects"), count("mh_assets"), count("mh_video_jobs"),
+    count("mh_video_jobs", q => q.eq("status", "failed")),
+    count("ms_shipments"), count("mh_wallet_transactions"), count("mh_memberships"),
+    count("ms_guest_visitors", q => q.gte("last_seen_at", activeSince)),
+    count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", daySince)),
+    count("ms_guest_visitors", q => q.is("user_id", null)),
+    admin.from("ms_guest_visitors").select("visitor_id,user_id,last_seen_at,last_path,visits").gte("last_seen_at", activeSince).order("last_seen_at", { ascending: false }).limit(30),
+    admin.from("ms_admin_issues").select("*").order("created_at", { ascending: false }).limit(25),
+    admin.from("mh_video_jobs").select("id,status,error_message,created_at,updated_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(10)
+  ]);
+  if (recentVisitors.error) throw recentVisitors.error;
+  if (issuesResult.error) throw issuesResult.error;
+  if (failedRecent.error) throw failedRecent.error;
+
+  const allUsers: any[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 500 });
+    if (error) throw error;
+    const batch = data.users || [];
+    allUsers.push(...batch);
+    if (batch.length < 500) break;
+  }
+  const ids = allUsers.map(u => u.id);
+  const [walletRows, memberRows] = ids.length ? await Promise.all([
+    admin.from("mh_wallets").select("user_id,balance").in("user_id", ids),
+    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at").in("user_id", ids)
+  ]) : [{ data: [], error: null }, { data: [], error: null }];
+  if (walletRows.error) throw walletRows.error;
+  if (memberRows.error) throw memberRows.error;
+  const wallets = new Map((walletRows.data || []).map((x: any) => [x.user_id, x.balance]));
+  const members = new Map((memberRows.data || []).map((x: any) => [x.user_id, x]));
+  const users = allUsers.slice(0, 100).map(u => ({
+    id: u.id, email: u.email || "", created_at: u.created_at, last_sign_in_at: u.last_sign_in_at,
+    confirmed: !!u.email_confirmed_at, wallet_balance: wallets.get(u.id) ?? 0,
+    membership: members.get(u.id) || null
+  }));
+  const health = [
+    { name: "Database", status: "healthy", detail: "Admin database queries responding" },
+    { name: "Authentication", status: "healthy", detail: "Supabase Auth admin API responding" },
+    { name: "Storage", status: "unknown", detail: "Storage bucket availability is not yet actively probed" },
+    { name: "AI generation", status: failedJobs > 0 ? "warning" : "healthy", detail: failedJobs + " failed video jobs recorded" },
+    { name: "Shipment tracking", status: "healthy", detail: shipments + " shipment records" }
+  ];
+  return {
+    generated_at: now.toISOString(),
+    counts: {
+      registered_users: allUsers.length, active_visitors_5m: visitorActive,
+      active_guests_24h: guests24h, guest_sessions_total: guestsTotal,
+      projects, assets, video_jobs: jobs, failed_video_jobs: failedJobs,
+      shipments, wallet_transactions: transactions, memberships
+    },
+    users,
+    recent_visitors: recentVisitors.data || [],
+    issues: issuesResult.data || [],
+    failed_jobs: failedRecent.data || [],
+    health
+  };
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  try {
+    const body = await req.json().catch(() => ({}));
+    const action = body.action;
+
+    if (action === "heartbeat") {
+      const visitorId = String(body.visitor_id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(visitorId)) return json({ error: "Invalid visitor session" }, 400);
+      const user = await identify(req);
+      const record = {
+        visitor_id: visitorId, last_seen_at: new Date().toISOString(),
+        last_path: String(body.path || "/").slice(0, 240),
+        user_id: user?.id || null,
+        user_agent: String(req.headers.get("user-agent") || "").slice(0, 300)
+      };
+      const { data: exists, error: findError } = await admin.from("ms_guest_visitors").select("visitor_id").eq("visitor_id", visitorId).maybeSingle();
+      if (findError) throw findError;
+      const result = exists
+        ? await admin.from("ms_guest_visitors").update(record).eq("visitor_id", visitorId)
+        : await admin.from("ms_guest_visitors").insert({ ...record, first_seen_at: new Date().toISOString(), visits: 1 });
+      if (result.error) throw result.error;
+      return json({ ok: true });
+    }
+
+    await requireAdmin(req);
+    if (action === "dashboard") return json(await dashboard());
+    if (action === "create_issue") {
+      const title = String(body.title || "").trim().slice(0, 160);
+      if (!title) return json({ error: "Issue title is required." }, 400);
+      const { data, error } = await admin.from("ms_admin_issues").insert({
+        title, details: String(body.details || "").slice(0, 5000),
+        severity: ["low","medium","high","critical"].includes(body.severity) ? body.severity : "medium",
+        source: "admin", created_by: (await identify(req))?.id
+      }).select("*").single();
+      if (error) throw error;
+      return json({ issue: data });
+    }
+    if (action === "update_issue") {
+      const id = String(body.id || "");
+      const status = String(body.status || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id) || !["open","investigating","resolved","ignored"].includes(status)) return json({ error: "Invalid issue update." }, 400);
+      const { data, error } = await admin.from("ms_admin_issues").update({
+        status, updated_at: new Date().toISOString(),
+        resolved_at: status === "resolved" ? new Date().toISOString() : null,
+        admin_notes: String(body.admin_notes || "").slice(0, 5000)
+      }).eq("id", id).select("*").single();
+      if (error) throw error;
+      return json({ issue: data });
+    }
+
+    if (action === "room_data") {
+      const room = String(body.room || "");
+      const stamp = new Date().toISOString();
+      if (room === "Site Features") {
+        const { data, error } = await admin.from("mh_site_features").select("*").order("sort_order");
+        if (error) throw error;
+        return json({ loaded: true, description: "Control tool visibility, access tiers and coin pricing.", features: data || [] });
+      }
+      if (room === "Site Settings") {
+        const { data, error } = await admin.from("mh_site_settings").select("key,value");
+        if (error) throw error;
+        const settings = Object.fromEntries((data || []).map((x: any) => [x.key, x.value]));
+        return json({ loaded: true, description: "Manage the platform-wide Magic Hour configuration.", settings });
+      }
+      if (room === "Site Monitor") {
+        const since = new Date(Date.now() - 24 * 3600000).toISOString();
+        const [users, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs] = await Promise.all([
+          count("mh_profiles"), count("ms_guest_visitors"), count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", since)),
+          count("mh_projects"), count("mh_assets"), count("mh_video_jobs", q => q.eq("status", "failed")), count("ms_shipments"),
+          admin.from("ms_guest_visitors").select("visitor_id,user_id,last_path,visits,last_seen_at").order("last_seen_at", { ascending: false }).limit(50),
+          admin.from("mh_video_jobs").select("id,status,error_message,updated_at,created_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(30)
+        ]);
+        if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error;
+        return json({ loaded: true, description: "Measured visitor activity and service records; uninstrumented metrics are not fabricated.",
+          counts: { users, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments },
+          visitors: visitors.data || [], failed_jobs: jobs.data || [] });
+      }
+      if (room === "User Centre") {
+        const { data: authData, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 100 });
+        if (authError) throw authError;
+        const ids = (authData.users || []).map((u: any) => u.id);
+        const [wallets, memberships, guests] = await Promise.all([
+          ids.length ? admin.from("mh_wallets").select("user_id,balance").in("user_id", ids) : { data: [], error: null },
+          ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at").in("user_id", ids) : { data: [], error: null },
+          admin.from("ms_guest_visitors").select("visitor_id,last_path,visits,last_seen_at").is("user_id", null).order("last_seen_at", { ascending: false }).limit(100)
+        ]);
+        if (wallets.error) throw wallets.error; if (memberships.error) throw memberships.error; if (guests.error) throw guests.error;
+        const w = new Map((wallets.data || []).map((x: any) => [x.user_id, x.balance]));
+        const m = new Map((memberships.data || []).map((x: any) => [x.user_id, x]));
+        const users = (authData.users || []).map((u: any) => ({ email: u.email || "", created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at || "Never", wallet_balance: w.get(u.id) ?? 0,
+          membership: m.get(u.id)?.plan_name || "Free", confirmed: !!u.email_confirmed_at }));
+        return json({ loaded: true, description: "Registered accounts, verification state, wallet balances, memberships and anonymous guest sessions.",
+          users, guests: guests.data || [] });
+      }
+      if (room === "Finance") {
+        const [transactions, memberships, txCount, memberCount, wallets] = await Promise.all([
+          admin.from("mh_wallet_transactions").select("created_at,user_id,transaction_type,amount,description,reference").order("created_at", { ascending: false }).limit(100),
+          admin.from("mh_memberships").select("user_id,plan_name,started_at,expires_at").order("started_at", { ascending: false }).limit(100),
+          count("mh_wallet_transactions"), count("mh_memberships"),
+          admin.from("mh_wallets").select("balance")
+        ]);
+        if (transactions.error) throw transactions.error; if (memberships.error) throw memberships.error; if (wallets.error) throw wallets.error;
+        const ids = [...new Set([...(transactions.data || []).map((x: any) => x.user_id), ...(memberships.data || []).map((x: any) => x.user_id)])];
+        const { data: users, error: userError } = ids.length ? await admin.auth.admin.listUsers({ page: 1, perPage: 1000 }) : { data: { users: [] }, error: null };
+        if (userError) throw userError;
+        const email = new Map((users?.users || []).map((u: any) => [u.id, u.email || ""]));
+        return json({ loaded: true, description: "Actual wallet ledger and membership records; revenue is not estimated from coin movements.",
+          counts: { transactions: txCount, memberships: memberCount, coins: (wallets.data || []).reduce((n: number, x: any) => n + Number(x.balance || 0), 0) },
+          transactions: (transactions.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })),
+          memberships: (memberships.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })) });
+      }
+      if (room === "API Centre") {
+        const [keys, usage] = await Promise.all([
+          admin.from("ms_api_keys").select("name,key_prefix,created_at,last_used_at,revoked_at").order("created_at", { ascending: false }).limit(100),
+          admin.from("ms_api_usage").select("created_at,endpoint,http_method,status_code").order("created_at", { ascending: false }).limit(100)
+        ]);
+        if (keys.error) throw keys.error; if (usage.error) throw usage.error;
+        return json({ loaded: true, description: "Developer API key metadata and request logs. Secret hashes are never returned.", keys: keys.data || [], usage: usage.data || [] });
+      }
+      if (room === "Issue Desk") {
+        const { data, error } = await admin.from("ms_admin_issues").select("*").order("created_at", { ascending: false }).limit(100);
+        if (error) throw error;
+        return json({ loaded: true, description: "Operational issue register and resolution history.", issues: data || [] });
+      }
+      if (room === "Campaigns") {
+        const { data, error } = await admin.from("announcements").select("*").order("created_at", { ascending: false }).limit(100);
+        if (error) throw error;
+        return json({ loaded: true, description: "Manage text announcements and media campaigns.", announcements: data || [] });
+      }
+      if (room === "Security") {
+        const { data, error } = await admin.from("mh_admin_audit_log").select("*").order("created_at", { ascending: false }).limit(100);
+        if (error) throw error;
+        return json({ loaded: true, description: "Privileged actions recorded by the server. Secrets and credentials are never displayed.", audit: data || [] });
+      }
+      if (room === "Deployment") {
+        const { data, error } = await admin.from("mh_video_jobs").select("created_at,status,error_message,updated_at").order("updated_at", { ascending: false }).limit(40);
+        if (error) throw error;
+        return json({ loaded: true, description: "Application jobs and release safeguards. Production deployment is not performed by this control.", jobs: data || [] });
+      }
+      if (room === "Backups") return json({ loaded: true, description: "Backup availability is controlled by Supabase project backup settings. No unverified backup or restore is reported as complete.", cards: [["Database backups","Check Supabase project backups and point-in-time recovery in the provider console.","Provider-managed"],["Private media","magic-hour-assets remains private; preserve bucket contents and mh_assets metadata together.","Protected"],["Restore test","A restore test has not been performed by this control centre.","Not verified"]] });
+      return json({ loaded: true, description: "This room is reserved for the final Site AI integration.", cards: [["Site AI","Connect only after all other control-centre systems are complete.","Reserved for last"]] });
+    }
+    if (action === "save_settings") {
+      const s = body.settings || {};
+      const entries = Object.entries({ announcement: String(s.announcement || "").slice(0,240), homepage_headline: String(s.homepage_headline || "").slice(0,140), support_email: String(s.support_email || "").slice(0,254), maintenance_mode: !!s.maintenance_mode });
+      for (const [key, value] of entries) {
+        const { error } = await admin.from("mh_site_settings").upsert({ key, value, updated_by: (await identify(req))?.id, updated_at: new Date().toISOString() }, { onConflict: "key" });
+        if (error) throw error;
+      }
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "settings.update", target: "site_settings", details: "Updated platform settings" });
+      return json({ ok: true });
+    }
+    if (action === "set_feature") {
+      const tool = String(body.tool_id || "").slice(0,80);
+      if (!/^[a-z0-9-]+$/i.test(tool)) return json({ error: "Invalid tool identifier." }, 400);
+      const { error } = await admin.from("mh_site_features").upsert({ tool_id: tool, enabled: !!body.enabled, updated_at: new Date().toISOString() }, { onConflict: "tool_id" });
+      if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "feature.toggle", target: tool, details: String(!!body.enabled) });
+      return json({ ok: true });
+    }
+    if (action === "save_announcement") {
+      const title = String(body.title || "").trim().slice(0,120), message = String(body.body || "").trim().slice(0,1000);
+      if (!title || !message) return json({ error: "Announcement title and message are required." }, 400);
+      const starts = body.starts_at ? new Date(String(body.starts_at)).toISOString() : null;
+      const ends = body.ends_at ? new Date(String(body.ends_at)).toISOString() : null;
+      if (starts && ends && new Date(ends) <= new Date(starts)) return json({ error: "End date must be after start date." }, 400);
+      const { data, error } = await admin.from("announcements").insert({ title, body: message, active: true, starts_at: starts, ends_at: ends }).select("*").single();
+      if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.create", target: data.id, details: title });
+      return json({ announcement: data });
+    }
+
+    return json({ error: "Unknown action" }, 400);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Admin request failed";
+    const status = message.includes("Admin access denied") ? 403 : message.includes("Sign in required") ? 401 : 500;
+    return json({ error: message }, status);
+  }
+});
