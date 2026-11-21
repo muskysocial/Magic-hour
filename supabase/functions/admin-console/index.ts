@@ -30,6 +30,10 @@ async function requireAdmin(req: Request) {
   if (error || !data || !["admin", "owner", "super_admin"].includes(data.role)) throw new Error("Admin access denied.");
   return user;
 }
+async function listAuthUsers() {
+  const allUsers = await listAuthUsers();
+  return allUsers;
+}
 async function findAuthUserByEmail(email: string) {
   for (let page = 1; page <= 20; page++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 500 });
@@ -234,15 +238,15 @@ Deno.serve(async (req: Request) => {
       }
       if (room === "Site Monitor") {
         const since = new Date(Date.now() - 24 * 3600000).toISOString();
-        const [users, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs] = await Promise.all([
-          count("mh_profiles"), count("ms_guest_visitors"), count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", since)),
+        const [authUsers, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs] = await Promise.all([
+          listAuthUsers(), count("ms_guest_visitors", q => q.is("user_id", null)), count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", since)),
           count("mh_projects"), count("mh_assets"), count("mh_video_jobs", q => q.eq("status", "failed")), count("ms_shipments"),
           admin.from("ms_guest_visitors").select("visitor_id,user_id,last_path,visits,last_seen_at").order("last_seen_at", { ascending: false }).limit(50),
           admin.from("mh_video_jobs").select("id,status,error_message,updated_at,created_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(30)
         ]);
         if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error;
         return json({ loaded: true, description: "Measured visitor activity and service records; uninstrumented metrics are not fabricated.",
-          counts: { users, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments },
+          counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments },
           visitors: visitors.data || [], failed_jobs: jobs.data || [] });
       }
       if (room === "User Centre") {
