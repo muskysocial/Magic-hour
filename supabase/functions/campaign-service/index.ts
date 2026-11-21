@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
       const title = String(body.title || "").trim().slice(0, 120);
       const message = String(body.message || "").trim().slice(0, 500);
       const assetId = String(body.asset_id || "");
-      const placements = Array.isArray(body.placements) ? [...new Set(body.placements)] : [];
+      const placements: string[] = Array.isArray(body.placements) ? Array.from(new Set((body.placements as unknown[]).map((p: unknown) => String(p)))) : [];
       if (!title || !/^[0-9a-f-]{36}$/i.test(assetId)) return json({ error: "Campaign title and media are required." }, 400);
       if (!placements.length || placements.some((p: string) => !["welcome","homepage"].includes(p))) return json({ error: "Choose a valid campaign placement." }, 400);
       const { data: asset, error: assetError } = await admin.from("mh_assets")
