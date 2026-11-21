@@ -154,6 +154,7 @@ const toolById = id => tools.find(t=>t.id===id) || {id,name:id,desc:"AI workspac
 function sidebarLink(label,icon){return `<button class="side-link ${page===label&&!activeTool?"active":""}" data-page="${label}"><span class="side-ico">${iconSvg(icon,18)}</span>${label}</button>`;}
 function toolCard(t){return `<button class="tool-card ${t.accent}" data-tool="${t.id}"><div class="art"><span class="tool-icon">${iconSvg(t.icon,32)}</span></div><h3>${t.name}</h3><p>${t.desc}</p><div class="card-foot"><span>Open workspace</span><span class="card-arrow">${iconSvg("arrow",15)}</span></div></button>`;}
 function renderHome(){return `
+${renderCampaignPublicPlacements()}
 <section class="hero">
   <div><div class="eyebrow">YOUR CREATIVE SPACE, ALL IN ONE PLACE</div><h1>What shall we <span>create</span> today?</h1><p>Design, transform and create with AI — all in one studio.</p></div>
   <div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="orb"></div><span class="spark one">${iconSvg("sparkles",21)}</span><span class="spark two">${iconSvg("sparkles",16)}</span></div>
@@ -877,6 +878,20 @@ document.addEventListener("click",async event=>{
 });
 if("serviceWorker" in navigator){
  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("PWA service worker:",error)));
+}
+
+function renderCampaignPublicPlacements(){
+ const homepage=publicCampaigns.filter(c=>c.placements?.includes("homepage"));
+ const welcome=publicCampaigns.find(c=>c.placements?.includes("welcome"));
+ const media=c=>c.media_type?.startsWith("video/")?'<video src="'+esc(c.media_url)+'" autoplay muted loop playsinline></video>':'<img src="'+esc(c.media_url)+'" alt="'+esc(c.title)+'">';
+ const strip=homepage.length?'<section class="campaign-home-strip" aria-label="Featured announcements">'+homepage.map(c=>'<article class="campaign-home-card">'+media(c)+'<div><b>'+esc(c.title)+'</b><p>'+esc(c.message||"")+'</p>'+(c.link_url?'<a href="'+esc(c.link_url)+'" target="_blank" rel="noopener">Learn more ↗</a>':"")+'</div></article>').join("")+'</section>':"";
+ let overlay="";
+ if(welcome&&!welcomeCampaignShown){
+  welcomeCampaignShown=true;
+  try{sessionStorage.setItem("mh_welcome_campaign_seen","1");}catch{}
+  overlay='<div class="campaign-welcome-overlay" role="dialog" aria-modal="true" aria-label="'+esc(welcome.title)+'"><div class="campaign-welcome-card"><button class="campaign-dismiss" data-campaign-dismiss aria-label="Close campaign">×</button><div class="campaign-public-media">'+media(welcome)+'</div><div class="campaign-public-copy"><h2>'+esc(welcome.title)+'</h2><p>'+esc(welcome.message||"")+'</p>'+(welcome.link_url?'<a class="primary-btn" href="'+esc(welcome.link_url)+'" target="_blank" rel="noopener">Learn more</a>':"")+'</div></div></div>';
+ }
+ return strip+overlay;
 }
 
 render();
