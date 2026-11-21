@@ -608,7 +608,8 @@ window.addEventListener("pagehide",persistWorkspaceState);
 let workspaceSaveTimer=null;window.addEventListener("scroll",()=>{clearTimeout(workspaceSaveTimer);workspaceSaveTimer=setTimeout(persistWorkspaceState,250);},{passive:true});
 function sendMessage(text){const value=text.trim();if(!value)return;messages.push({role:"user",text:value});messages.push({role:"assistant",text:"I’ve got your request. Live AI replies will be available when the chat model is connected. You can open one of the tool workspaces from Home in the meantime."});page="New chat";activeTool=null;render();}
 app.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;
-if(b.dataset.adminRoom){activeAdminRoom=b.dataset.adminRoom;if(activeAdminRoom==="Overview")loadAdminDashboard(true);else render();return;}\nif(b.dataset.adminRefresh!==undefined){await loadAdminDashboard(true);return;}
+if(b.dataset.adminRoom){activeAdminRoom=b.dataset.adminRoom;if(activeAdminRoom==="Overview")loadAdminDashboard(true);else render();return;}
+if(b.dataset.adminRefresh!==undefined){await loadAdminDashboard(true);return;}
 if(b.dataset.adminIssueStatus){b.disabled=true;try{await adminConsoleRequest("update_issue",{id:b.dataset.adminIssueStatus,status:b.dataset.status});await loadAdminDashboard(true);}catch(error){alert("Could not update issue: "+(error.message||error));b.disabled=false;}return;}
 if(b.dataset.adminScroll){const target=b.dataset.adminScroll==="users"?".admin-table-wrap":b.dataset.adminScroll==="issues"?".admin-issue-form":".admin-fail-list";app.querySelector(target)?.scrollIntoView({behavior:"smooth",block:"start"});return;}
 
