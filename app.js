@@ -1064,3 +1064,4 @@ function renderCampaignPublicPlacements(){
 render();
 loadPublicSiteConfig();
 loadPublicCampaigns();
+initializeAppAuth();
