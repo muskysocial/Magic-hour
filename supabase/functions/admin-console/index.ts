@@ -238,16 +238,24 @@ Deno.serve(async (req: Request) => {
       }
       if (room === "Site Monitor") {
         const since = new Date(Date.now() - 5 * 60000).toISOString();
-        const [authUsers, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs] = await Promise.all([
+        const [authUsers, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs, storageProbe] = await Promise.all([
           listAuthUsers(), count("ms_guest_visitors", q => q.is("user_id", null)), count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", since)),
           count("mh_projects"), count("mh_assets"), count("mh_video_jobs", q => q.eq("status", "failed")), count("ms_shipments"),
           admin.from("ms_guest_visitors").select("visitor_id,user_id,last_path,visits,last_seen_at").order("last_seen_at", { ascending: false }).limit(50),
-          admin.from("mh_video_jobs").select("id,status,error_message,updated_at,created_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(30)
+          admin.from("mh_video_jobs").select("id,status,error_message,updated_at,created_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(30),
+          admin.storage.from("magic-hour-assets").list("", { limit: 1 })
         ]);
         if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error;
-        return json({ loaded: true, description: "Live guests seen in the last five minutes, daily visitor records and service metrics; uninstrumented metrics are not fabricated.",
+        const health = [
+          { name: "Database", status: "healthy", detail: "Live admin database queries completed" },
+          { name: "Authentication", status: "healthy", detail: "Supabase Auth account directory responded" },
+          { name: "Private storage", status: storageProbe.error ? "warning" : "healthy", detail: storageProbe.error ? storageProbe.error.message : "Private media bucket is reachable" },
+          { name: "AI providers", status: "unknown", detail: "Provider availability is not directly probed by this monitor" },
+          { name: "Shipment records", status: "healthy", detail: shipments + " shipment records are accessible" }
+        ];
+        return json({ loaded: true, description: "Live guests seen in the last five minutes, visitor records and service health probes; provider availability is not fabricated.",
           counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments },
-          visitors: visitors.data || [], failed_jobs: jobs.data || [] });
+          health, visitors: visitors.data || [], failed_jobs: jobs.data || [] });
       }
       if (room === "User Centre") {
         const allAuthUsers = await listAuthUsers();
