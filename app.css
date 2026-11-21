@@ -446,3 +446,33 @@ body{font-size:14px}
 .admin-alert{padding:13px 15px;background:rgba(160,40,50,.16);border:1px solid rgba(255,100,110,.3);border-radius:12px;color:#ffb7bb;margin-bottom:16px}
 .admin-loading{padding:35px;border:1px solid rgba(160,140,255,.16);border-radius:16px;color:#aab4c7;background:#151a2b}
 @media(max-width:760px){.admin-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-health-grid{grid-template-columns:1fr}.admin-head{align-items:flex-start;flex-direction:column}.admin-issue-form{grid-template-columns:1fr}.admin-issue-form textarea,.admin-issue-form button{grid-column:auto;grid-row:auto}.admin-issue{align-items:flex-start;flex-direction:column}.admin-issue-actions{justify-content:flex-start}.admin-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-stat b{font-size:25px}}
+
+
+/* Magic Hour Site Control Centre — room navigation and responsive workspace */
+.admin-control-centre{max-width:1320px;margin:0 auto;padding:12px 0 54px;color:var(--text,#eef2ff)}
+.admin-control-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:8px 0 22px}
+.admin-control-head h1{font:850 clamp(27px,4vw,40px) Manrope;margin:7px 0 6px;letter-spacing:-1.3px}
+.admin-control-head p{margin:0;color:var(--muted,#9ca8bd);font-size:13px;line-height:1.55}
+.admin-owner-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid rgba(153,117,255,.32);border-radius:999px;background:#211934;color:#d7c3ff;font-size:11px;font-weight:800;white-space:nowrap}
+.admin-room-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:0 0 20px}
+.admin-room-link{display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:9px;align-items:center;text-align:left;min-width:0;padding:12px;border:1px solid rgba(153,139,190,.17);border-radius:13px;background:linear-gradient(145deg,#19182a,#111321);color:#e9e7f4;cursor:pointer;transition:border-color .18s,transform .18s,background .18s}
+.admin-room-link:hover{border-color:#8665c8;transform:translateY(-1px)}
+.admin-room-link.active{border-color:#9870ec;background:linear-gradient(145deg,#302044,#1b1930);box-shadow:0 0 0 1px #9870ec22}
+.admin-room-link>span{grid-row:span 2;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#33254b;color:#d7bcff}
+.admin-room-link b{font-size:12px;line-height:1.3}
+.admin-room-link small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9695aa;font-size:9px;margin-top:3px}
+.admin-room-main{min-width:0}
+.admin-room-panel{padding:clamp(15px,2.5vw,23px);border:1px solid rgba(153,139,190,.17);border-radius:18px;background:linear-gradient(145deg,rgba(24,23,40,.96),rgba(13,16,29,.96))}
+.admin-room-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:19px}
+.admin-room-kicker{color:#b89ae9;font-size:9px;font-weight:900;letter-spacing:1.3px}
+.admin-room-heading h2{margin:7px 0;font:850 25px Manrope;letter-spacing:-.6px}
+.admin-room-heading p{max-width:700px;margin:0;color:#a5a6b8;font-size:13px;line-height:1.6}
+.admin-room-mark{display:grid;place-items:center;flex:none;width:48px;height:48px;border:1px solid #7954ae66;border-radius:14px;background:#2b2040;color:#d7bcff}
+.admin-room-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.admin-room-card{display:flex;flex-direction:column;justify-content:space-between;gap:15px;min-height:116px;padding:15px;border:1px solid rgba(153,139,190,.15);border-radius:13px;background:#141727}
+.admin-room-card b{font-size:13px;color:#f0edfa}
+.admin-room-card p{margin:5px 0 0;color:#9da3b7;font-size:11px;line-height:1.55}
+.admin-room-status{align-self:flex-start;padding:5px 8px;border:1px solid #57456f;border-radius:30px;color:#cdb6ef;font-size:9px;font-weight:750}
+.admin-room-note{margin:17px 0 0;color:#9298aa;font-size:10px;line-height:1.6}
+@media(max-width:900px){.admin-room-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.admin-control-head{flex-direction:column}.admin-room-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.admin-room-link{padding:10px;grid-template-columns:26px minmax(0,1fr);column-gap:7px}.admin-room-link>span{width:26px;height:26px}.admin-room-link b{font-size:11px}.admin-room-link small{font-size:8px}.admin-room-cards{grid-template-columns:1fr}.admin-room-heading h2{font-size:22px}}
