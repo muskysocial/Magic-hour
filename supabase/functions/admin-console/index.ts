@@ -318,9 +318,14 @@ Deno.serve(async (req: Request) => {
         return json({ loaded: true, description: "Manage text announcements and media campaigns.", announcements: data || [] });
       }
       if (room === "Security") {
-        const { data, error } = await admin.from("mh_admin_audit_log").select("*").order("created_at", { ascending: false }).limit(100);
-        if (error) throw error;
-        return json({ loaded: true, description: "Privileged actions recorded by the server. Secrets and credentials are never displayed.", audit: data || [] });
+        const [{data:admins,error:adminError},{data:audit,error:auditError}] = await Promise.all([
+          admin.from("admin_users").select("user_id,role,created_at").order("created_at",{ascending:true}),
+          admin.from("mh_admin_audit_log").select("*").order("created_at", { ascending: false }).limit(100)
+        ]);
+        if(adminError)throw adminError;if(auditError)throw auditError;
+        const authUsers=await findAuthUsersByIds((admins||[]).map((x:any)=>x.user_id));
+        const emailById=new Map(authUsers.map((u:any)=>[u.id,u.email||""]));
+        return json({ loaded: true, description: "Current admin role assignments and privileged actions recorded by the server. Secrets and credentials are never displayed.", admins:(admins||[]).map((x:any)=>({...x,email:emailById.get(x.user_id)||x.user_id})), audit:audit||[] });
       }
       if (room === "Deployment") {
         const { data, error } = await admin.from("mh_video_jobs").select("created_at,status,error_message,updated_at").order("updated_at", { ascending: false }).limit(40);
