@@ -260,7 +260,7 @@ Deno.serve(async (req: Request) => {
       }
       if (room === "User Centre") {
         const allAuthUsers = await listAuthUsers();
-        const recentUsers = allAuthUsers.slice(0, 100);
+        const recentUsers = [...allAuthUsers].sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 100);
         const ids = recentUsers.map((u: any) => u.id);
         const [wallets, memberships, guests] = await Promise.all([
           ids.length ? admin.from("mh_wallets").select("user_id,balance").in("user_id", ids) : { data: [], error: null },
@@ -280,7 +280,7 @@ Deno.serve(async (req: Request) => {
         const [transactions, memberships, txCount, memberCount, wallets] = await Promise.all([
           admin.from("mh_wallet_transactions").select("created_at,user_id,transaction_type,amount,description,reference").order("created_at", { ascending: false }).limit(100),
           admin.from("mh_memberships").select("user_id,plan_name,started_at,expires_at").order("started_at", { ascending: false }).limit(100),
-          count("mh_wallet_transactions"), count("mh_memberships"),
+          count("mh_wallet_transactions"), count("mh_memberships", q => q.gt("expires_at", new Date().toISOString())),
           admin.from("mh_wallets").select("balance")
         ]);
         if (transactions.error) throw transactions.error; if (memberships.error) throw memberships.error; if (wallets.error) throw wallets.error;
