@@ -350,9 +350,18 @@ Deno.serve(async (req: Request) => {
         return json({loaded:true,description:"Manage public brand assets and theme appearance.",settings:Object.fromEntries((data||[]).map((x:any)=>[x.key,x.value]))});
       }
       if (room === "Notifications") {
-        const {data,error}=await admin.from("announcements").select("*").order("created_at",{ascending:false}).limit(100);
-        if(error)throw error;
-        return json({loaded:true,description:"Publish and manage site-wide notices.",announcements:data||[]});
+        const [issues, failedJobs, tickets] = await Promise.all([
+          admin.from("ms_admin_issues").select("id,title,details,severity,status,created_at").in("status", ["open","investigating"]).order("created_at",{ascending:false}).limit(25),
+          admin.from("mh_video_jobs").select("id,error_message,status,updated_at").eq("status","failed").order("updated_at",{ascending:false}).limit(25),
+          admin.from("mh_support_tickets").select("id,subject,email,status,created_at").in("status",["open","in_progress"]).order("created_at",{ascending:false}).limit(25)
+        ]);
+        if(issues.error)throw issues.error;if(failedJobs.error)throw failedJobs.error;if(tickets.error)throw tickets.error;
+        const alerts = [
+          ...(issues.data||[]).map(x=>({id:x.id,kind:"Issue",title:x.title,detail:x.details||"No details",status:x.severity+" · "+x.status,created_at:x.created_at,room:"Issue Desk"})),
+          ...(failedJobs.data||[]).map(x=>({id:x.id,kind:"Failed AI job",title:"Generation job failed",detail:x.error_message||"No error details recorded",status:x.status,created_at:x.updated_at,room:"AI Jobs"})),
+          ...(tickets.data||[]).map(x=>({id:x.id,kind:"Support",title:x.subject,detail:x.email,status:x.status,created_at:x.created_at,room:"Support"}))
+        ].sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).slice(0,60);
+        return json({loaded:true,description:"Operational inbox combining unresolved issues, failed generation jobs and open customer support requests.",alerts});
       }
       if (room === "Backups") return json({ loaded: true, description: "Backup availability is controlled by Supabase project backup settings. No unverified backup or restore is reported as complete.", cards: [["Database backups","Check Supabase project backups and point-in-time recovery in the provider console.","Provider-managed"],["Private media","magic-hour-assets remains private; preserve bucket contents and mh_assets metadata together.","Protected"],["Restore test","A restore test has not been performed by this control centre.","Not verified"]] });
       return json({ loaded: true, description: "This room is reserved for the final Site AI integration.", cards: [["Site AI","Connect only after all other control-centre systems are complete.","Reserved for last"]] });
