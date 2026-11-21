@@ -18,3 +18,8 @@ jobs:
         run: node --input-type=module --check < app.js
       - name: Check API client JavaScript syntax
         run: node --input-type=module --check < api.js
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Supabase Edge Functions
+        run: deno check supabase/functions/admin-console/index.ts supabase/functions/campaign-service/index.ts
