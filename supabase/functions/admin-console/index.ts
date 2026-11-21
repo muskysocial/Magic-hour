@@ -449,6 +449,16 @@ Deno.serve(async (req: Request) => {
       return json({ announcement: data });
     }
 
+    if (action === "delete_announcement") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid announcement." }, 400);
+      const { data, error } = await admin.from("mh_site_announcements").delete().eq("id", id).select("id,title").maybeSingle();
+      if (error) throw error;
+      if (!data) return json({ error: "Announcement not found." }, 404);
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.delete", target: id, details: data.title });
+      return json({ ok: true });
+    }
+
     if (action === "revoke_api_key") {
       const id = String(body.id || "");
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid API key." }, 400);
