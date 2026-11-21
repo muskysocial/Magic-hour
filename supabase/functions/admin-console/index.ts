@@ -206,6 +206,7 @@ Deno.serve(async (req: Request) => {
         source: "admin", created_by: (await identify(req))?.id
       }).select("*").single();
       if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "issue.create", target: data.id, details: title });
       return json({ issue: data });
     }
     if (action === "update_issue") {
@@ -228,7 +229,7 @@ Deno.serve(async (req: Request) => {
       if (room === "Site Features") {
         const { data, error } = await admin.from("mh_site_features").select("*").order("sort_order");
         if (error) throw error;
-        return json({ loaded: true, description: "Control tool visibility, access tiers and coin pricing.", features: data || [] });
+        return json({ loaded: true, description: "Control tool visibility and access tiers. Coin costs are catalogue values; live provider billing remains managed by each tool service.", features: data || [] });
       }
       if (room === "Site Settings") {
         const { data, error } = await admin.from("mh_site_settings").select("key,value");
@@ -341,7 +342,7 @@ Deno.serve(async (req: Request) => {
       if (room === "Feature Experiments") {
         const {data,error}=await admin.from("mh_feature_experiments").select("*").order("created_at",{ascending:false}).limit(100);
         if(error)throw error;
-        return json({loaded:true,description:"Create controlled feature experiments and set rollout percentages.",experiments:data||[]});
+        return json({loaded:true,description:"Store experiment definitions and rollout settings. Traffic changes only when an experiment is connected to a live feature.",experiments:data||[]});
       }
       if (room === "Appearance") {
         const {data,error}=await admin.from("mh_site_settings").select("key,value").in("key",["brand_name","logo_url","favicon_url","accent_color","social_image_url"]);
