@@ -100,7 +100,8 @@ async function dashboard() {
   if (failedRecent.error) throw failedRecent.error;
 
   const allUsers: any[] = await listAuthUsers();
-  const ids = allUsers.map(u => u.id);
+  const recentUsers = [...allUsers].sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0,100);
+  const ids = recentUsers.map(u => u.id);
   const [walletRows, memberRows] = ids.length ? await Promise.all([
     admin.from("mh_wallets").select("user_id,balance").in("user_id", ids),
     admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at,unlimited_duration").in("user_id", ids).or("unlimited_duration.eq.true,expires_at.gt."+now.toISOString())
@@ -109,7 +110,7 @@ async function dashboard() {
   if (memberRows.error) throw memberRows.error;
   const wallets = new Map((walletRows.data || []).map((x: any) => [x.user_id, x.balance]));
   const members = new Map((memberRows.data || []).map((x: any) => [x.user_id, x]));
-  const users = allUsers.slice(0, 100).map(u => ({
+  const users = recentUsers.map(u => ({
     id: u.id, email: u.email || "", created_at: u.created_at, last_sign_in_at: u.last_sign_in_at,
     confirmed: !!u.email_confirmed_at, wallet_balance: wallets.get(u.id) ?? 0,
     membership: members.get(u.id) || null
