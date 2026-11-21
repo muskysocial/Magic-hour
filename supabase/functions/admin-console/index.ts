@@ -87,7 +87,7 @@ async function dashboard() {
   ] = await Promise.all([
     count("mh_profiles"), count("mh_projects"), count("mh_assets"), count("mh_video_jobs"),
     count("mh_video_jobs", q => q.eq("status", "failed")),
-    count("ms_shipments"), count("mh_wallet_transactions"), count("mh_memberships", q => q.or("expires_at.is.null,expires_at.gt."+new Date().toISOString())),
+    count("ms_shipments"), count("mh_wallet_transactions"), count("mh_memberships", q => q.or("unlimited_duration.eq.true,expires_at.gt."+new Date().toISOString())),
     count("ms_guest_visitors", q => q.gte("last_seen_at", activeSince)),
     count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", daySince)),
     count("ms_guest_visitors", q => q.is("user_id", null)),
@@ -103,7 +103,7 @@ async function dashboard() {
   const ids = allUsers.map(u => u.id);
   const [walletRows, memberRows] = ids.length ? await Promise.all([
     admin.from("mh_wallets").select("user_id,balance").in("user_id", ids),
-    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at,unlimited_duration").in("user_id", ids).or("expires_at.is.null,expires_at.gt."+now.toISOString())
+    admin.from("mh_memberships").select("user_id,plan_name,plan_key,expires_at,unlimited_duration").in("user_id", ids).or("unlimited_duration.eq.true,expires_at.gt."+now.toISOString())
   ]) : [{ data: [], error: null }, { data: [], error: null }];
   if (walletRows.error) throw walletRows.error;
   if (memberRows.error) throw memberRows.error;
@@ -264,7 +264,7 @@ Deno.serve(async (req: Request) => {
         const ids = recentUsers.map((u: any) => u.id);
         const [wallets, memberships, guests] = await Promise.all([
           ids.length ? admin.from("mh_wallets").select("user_id,balance").in("user_id", ids) : { data: [], error: null },
-          ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at,unlimited_duration").in("user_id", ids).or("expires_at.is.null,expires_at.gt."+new Date().toISOString()) : { data: [], error: null },
+          ids.length ? admin.from("mh_memberships").select("user_id,plan_name,expires_at,unlimited_duration").in("user_id", ids).or("unlimited_duration.eq.true,expires_at.gt."+new Date().toISOString()) : { data: [], error: null },
           admin.from("ms_guest_visitors").select("visitor_id,last_path,visits,last_seen_at").is("user_id", null).order("last_seen_at", { ascending: false }).limit(100)
         ]);
         if (wallets.error) throw wallets.error; if (memberships.error) throw memberships.error; if (guests.error) throw guests.error;
