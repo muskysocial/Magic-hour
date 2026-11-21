@@ -362,7 +362,7 @@ async function adminConsoleRequest(action,payload={}){
 function sendSiteTelemetry(eventType,message="",stack="",durationMs=0){
  try{
   const visitorId=visitorSessionId();
-  const scrub=value=>String(value||"").replace(/([?&][^=\\s]+)=([^&\\s]+)/g,"$1=[redacted]");
+  const scrub=value=>String(value||"").replace(/([?&][^=\s]+)=([^&\s]+)/g,"$1=[redacted]");
   supabase.functions.invoke("admin-console",{body:{action:"telemetry",visitor_id:visitorId,event_type:eventType,message:scrub(message).slice(0,1000),stack:scrub(stack).slice(0,4000),path:location.pathname,duration_ms:durationMs}})
    .then(({error,data})=>{if(error||data?.error)console.warn("Site telemetry:",error?.message||data?.error||"unavailable");})
    .catch(error=>console.warn("Site telemetry:",error?.message||error));
