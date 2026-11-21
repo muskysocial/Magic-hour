@@ -325,15 +325,31 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "save_settings") {
       const s = body.settings || {};
-      const publicUrls = [s.logo_url,s.favicon_url,s.social_image_url].filter(Boolean);
-      if (publicUrls.some((v: any) => !String(v).toLowerCase().startsWith("https://"))) return json({ error: "Brand image URLs must use HTTPS." }, 400);
-      const entries = Object.entries({ announcement: String(s.announcement || "").slice(0,240), homepage_headline: String(s.homepage_headline || "").slice(0,140), support_email: String(s.support_email || "").slice(0,254), maintenance_mode: !!s.maintenance_mode, brand_name: String(s.brand_name || "Magic Hour").slice(0,80), logo_url: String(s.logo_url || "").slice(0,2048), favicon_url: String(s.favicon_url || "").slice(0,2048), accent_color: /^#[0-9a-f]{6}$/i.test(String(s.accent_color||"")) ? s.accent_color : "#a879ef", social_image_url: String(s.social_image_url || "").slice(0,2048) });
+      const allowed: Record<string, unknown> = {};
+      if ("announcement" in s) allowed.announcement = String(s.announcement || "").slice(0,240);
+      if ("homepage_headline" in s) allowed.homepage_headline = String(s.homepage_headline || "").slice(0,140);
+      if ("support_email" in s) allowed.support_email = String(s.support_email || "").slice(0,254);
+      if ("maintenance_mode" in s) allowed.maintenance_mode = !!s.maintenance_mode;
+      if ("brand_name" in s) allowed.brand_name = String(s.brand_name || "Magic Hour").slice(0,80);
+      for (const key of ["logo_url","favicon_url","social_image_url"]) {
+        if (!(key in s)) continue;
+        const value = String(s[key] || "").trim();
+        if (value && !value.toLowerCase().startsWith("https://")) return json({ error: "Brand image URLs must use HTTPS." }, 400);
+        allowed[key] = value.slice(0,2048);
+      }
+      if ("accent_color" in s) {
+        const color = String(s.accent_color || "");
+        if (!/^#[0-9a-f]{6}$/i.test(color)) return json({ error: "Enter a valid six-digit accent colour." }, 400);
+        allowed.accent_color = color;
+      }
+      const entries = Object.entries(allowed);
+      if (!entries.length) return json({ error: "No settings were supplied." }, 400);
       for (const [key, value] of entries) {
         const { error } = await admin.from("mh_site_settings").upsert({ key, value, updated_by: (await identify(req))?.id, updated_at: new Date().toISOString() }, { onConflict: "key" });
         if (error) throw error;
       }
-      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "settings.update", target: "site_settings", details: "Updated platform settings" });
-      return json({ ok: true });
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "settings.update", target: "site_settings", details: "Updated keys: " + entries.map(([key]) => key).join(", ") });
+      return json({ ok: true, updated: entries.map(([key]) => key) });
     }
     if (action === "set_feature") {
       const tool = String(body.tool_id || "").slice(0,80);
