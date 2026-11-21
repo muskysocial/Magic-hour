@@ -46,7 +46,7 @@ on conflict(tool_id) do nothing;
 -- Server-only, transaction-safe wallet adjustment. The Edge Function authenticates
 -- the owner before invoking this service-role-only RPC.
 create or replace function public.mh_admin_adjust_wallet(p_user_id uuid,p_amount bigint,p_description text,p_reference text)
-returns bigint language plpgsql security invoker set search_path=public as $
+returns bigint language plpgsql security invoker set search_path=public as $$
 declare next_balance bigint;
 begin
   if p_amount = 0 or abs(p_amount) > 100000000 then raise exception 'Invalid adjustment amount'; end if;
