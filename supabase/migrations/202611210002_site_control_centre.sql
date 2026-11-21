@@ -42,3 +42,21 @@ insert into public.mh_site_features(tool_id,name,description,enabled,sort_order)
 ('social','All Social Media Platform','Manage social media services',true,5),
 ('shipment-room','Shipment Journey','Create and share animated shipment tracking',true,6)
 on conflict(tool_id) do nothing;
+
+-- Server-only, transaction-safe wallet adjustment. The Edge Function authenticates
+-- the owner before invoking this service-role-only RPC.
+create or replace function public.mh_admin_adjust_wallet(p_user_id uuid,p_amount bigint,p_description text,p_reference text)
+returns bigint language plpgsql security definer set search_path=public as $$
+declare next_balance bigint;
+begin
+  if p_amount = 0 or abs(p_amount) > 100000000 then raise exception 'Invalid adjustment amount'; end if;
+  insert into public.mh_wallets(user_id,balance) values(p_user_id,0) on conflict(user_id) do nothing;
+  update public.mh_wallets set balance=balance+p_amount,updated_at=now()
+    where user_id=p_user_id and balance+p_amount>=0 returning balance into next_balance;
+  if next_balance is null then raise exception 'Insufficient wallet balance'; end if;
+  insert into public.mh_wallet_transactions(user_id,amount,transaction_type,description,reference)
+    values(p_user_id,p_amount,'adjustment',left(coalesce(p_description,'Admin adjustment'),240),p_reference);
+  return next_balance;
+end; $$;
+revoke all on function public.mh_admin_adjust_wallet(uuid,bigint,text,text) from public,anon,authenticated;
+grant execute on function public.mh_admin_adjust_wallet(uuid,bigint,text,text) to service_role;
