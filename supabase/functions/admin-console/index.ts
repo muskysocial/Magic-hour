@@ -272,17 +272,19 @@ Deno.serve(async (req: Request) => {
           count("mh_site_telemetry",q=>q.gte("created_at",daySince).eq("event_type","page_load"))
         ]);
         if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error; if(telemetry.error)throw telemetry.error;
+        const pageSamples=(telemetry.data||[]).filter((x:any)=>x.event_type==="page_load").map((x:any)=>Number(x.duration_ms)).filter((x:number)=>Number.isFinite(x)&&x>0);
+        const averagePageLoadMs=pageSamples.length?Math.round(pageSamples.reduce((sum:number,x:number)=>sum+x,0)/pageSamples.length):0;
         const health = [
           { name: "Database", status: "healthy", detail: "Live admin database queries completed" },
           { name: "Authentication", status: "healthy", detail: "Supabase Auth account directory responded" },
           { name: "Private storage", status: storageProbe.error ? "warning" : "healthy", detail: storageProbe.error ? storageProbe.error.message : "Private media bucket is reachable" },
           { name: "Client errors", status: clientErrors > 0 ? "warning" : "healthy", detail: clientErrors + " JavaScript errors or unhandled rejections recorded in the last 24 hours" },
-          { name: "Page performance", status: pageLoads > 0 ? "healthy" : "unknown", detail: pageLoads + " page-load measurements recorded in the last 24 hours" },
+          { name: "Page performance", status: pageLoads === 0 ? "unknown" : averagePageLoadMs > 5000 ? "warning" : "healthy", detail: pageLoads + " page-load measurements in 24 hours; latest 100 sample average " + (averagePageLoadMs ? averagePageLoadMs + " ms" : "not available") },
           { name: "AI providers", status: "unknown", detail: "Provider availability is not directly probed by this monitor" },
           { name: "Shipment records", status: "healthy", detail: shipments + " shipment records are accessible" }
         ];
         return json({ loaded: true, description: "Live visitor activity, private storage health, client-side errors and page-load timing. Provider availability is not fabricated.",
-          counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments, telemetry_24h:telemetryCount, client_errors_24h:clientErrors, page_loads_24h:pageLoads },
+          counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments, telemetry_24h:telemetryCount, client_errors_24h:clientErrors, page_loads_24h:pageLoads, average_page_load_ms:averagePageLoadMs },
           health, visitors: visitors.data || [], failed_jobs: jobs.data || [], telemetry:telemetry.data||[] });
       }
       if (room === "User Centre") {
