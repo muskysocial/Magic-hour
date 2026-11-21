@@ -90,3 +90,12 @@ create index if not exists mh_support_tickets_created_idx on public.mh_support_t
 alter table public.mh_support_tickets enable row level security;
 drop policy if exists "Magic Hour owner reads support tickets" on public.mh_support_tickets;
 create policy "Magic Hour owner reads support tickets" on public.mh_support_tickets for select to authenticated using (lower(coalesce((select auth.jwt()->>'email'),''))='ugohjeremiah16@gmail.com' and exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()) and a.role in ('admin','owner','super_admin')));
+
+-- The browser can read only rows allowed by the owner-only RLS policies.
+-- Privileged writes are performed exclusively by the authenticated Edge Function.
+revoke all on public.mh_site_settings, public.mh_site_features, public.mh_admin_audit_log,
+  public.mh_feature_experiments, public.mh_support_tickets from anon;
+grant select on public.mh_site_settings, public.mh_site_features, public.mh_admin_audit_log,
+  public.mh_feature_experiments, public.mh_support_tickets to authenticated;
+grant all on public.mh_site_settings, public.mh_site_features, public.mh_admin_audit_log,
+  public.mh_feature_experiments, public.mh_support_tickets to service_role;
