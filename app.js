@@ -345,8 +345,14 @@ function visitorSessionId(){
  try{id=localStorage.getItem(key)||"";if(!id){id=crypto.randomUUID();localStorage.setItem(key,id);}}catch{id=crypto.randomUUID();}
  return id;
 }
+let visitorVisitStarted=false;
 async function sendVisitorHeartbeat(){
- try{await supabase.functions.invoke("admin-console",{body:{action:"heartbeat",visitor_id:visitorSessionId(),path:location.pathname+location.search}});}catch(error){console.warn("Visitor heartbeat:",error?.message||error);}
+ const startsVisit=!visitorVisitStarted;
+ if(startsVisit)visitorVisitStarted=true;
+ try{
+  const {data,error}=await supabase.functions.invoke("admin-console",{body:{action:"heartbeat",visitor_id:visitorSessionId(),path:location.pathname+location.search,visit_start:startsVisit}});
+  if(error||data?.error)throw error||new Error(data.error);
+ }catch(error){if(startsVisit)visitorVisitStarted=false;console.warn("Visitor heartbeat:",error?.message||error);}
 }
 async function adminConsoleRequest(action,payload={}){
  const {data,error}=await supabase.functions.invoke("admin-console",{body:{action,...payload}});
