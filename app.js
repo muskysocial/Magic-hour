@@ -511,7 +511,7 @@ function renderAdminUploads(){
  '<p class="admin-room-note">Important: uploads are private and remain owned by this admin account. Publishing them to homepage sections, AI tool cards or welcome-screen campaigns is not enabled yet; that needs a separate destination and campaign configuration so private files are never exposed accidentally.</p></section>';
 }
 function renderAdminCampaigns(){
- const media=userAssets.filter(a=>a.mime_type?.startsWith("image/")||a.mime_type?.startsWith("video/"));
+ const media=userAssets.filter(a=>a.storage_path?.startsWith((currentUser?.id||"")+"/site-media/")&&(a.mime_type?.startsWith("image/")||a.mime_type?.startsWith("video/")));
  const edit=editingCampaign||{};
  const options=media.map(a=>'<option value="'+esc(a.id)+'" '+(edit.asset_id===a.id?'selected':'')+'>'+esc(a.file_name)+' ('+esc(a.mime_type)+')</option>').join("");
  const rows=adminCampaigns.map(c=>{
