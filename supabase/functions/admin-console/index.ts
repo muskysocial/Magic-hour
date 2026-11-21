@@ -165,13 +165,17 @@ Deno.serve(async (req: Request) => {
       const [settingsResult, featureResult, announcementResult] = await Promise.all([
         admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","maintenance_mode","brand_name","logo_url","favicon_url","accent_color","social_image_url"]),
         admin.from("mh_site_features").select("tool_id,enabled,access_tier,coin_cost,sort_order").order("sort_order"),
-        admin.from("announcements").select("id,title,body,starts_at,ends_at").eq("active",true).or("starts_at.is.null,starts_at.lte."+now).or("ends_at.is.null,ends_at.gt."+now).order("created_at",{ascending:false}).limit(5)
+        admin.from("announcements").select("id,title,body,starts_at,ends_at,created_at").eq("active",true).order("created_at",{ascending:false}).limit(100)
       ]);
       if (settingsResult.error) throw settingsResult.error;
       if (featureResult.error) throw featureResult.error;
       if (announcementResult.error) throw announcementResult.error;
       const settings = Object.fromEntries((settingsResult.data || []).map((x: any) => [x.key, x.value]));
-      return json({ settings, features: featureResult.data || [], announcements: announcementResult.data || [] });
+      const announcements = (announcementResult.data || []).filter((item: any) =>
+        (!item.starts_at || new Date(item.starts_at).getTime() <= Date.now()) &&
+        (!item.ends_at || new Date(item.ends_at).getTime() > Date.now())
+      ).slice(0,5);
+      return json({ settings, features: featureResult.data || [], announcements });
     }
     if (action === "submit_support") {
       const email=String(body.email||"").trim().toLowerCase();
@@ -454,8 +458,11 @@ Deno.serve(async (req: Request) => {
     if (action === "save_announcement") {
       const title = String(body.title || "").trim().slice(0,120), message = String(body.body || "").trim().slice(0,1000);
       if (!title || !message) return json({ error: "Announcement title and message are required." }, 400);
-      const starts = body.starts_at ? new Date(String(body.starts_at)).toISOString() : null;
-      const ends = body.ends_at ? new Date(String(body.ends_at)).toISOString() : null;
+      const startDate = body.starts_at ? new Date(String(body.starts_at)) : null;
+      const endDate = body.ends_at ? new Date(String(body.ends_at)) : null;
+      if ((startDate && !Number.isFinite(startDate.getTime())) || (endDate && !Number.isFinite(endDate.getTime()))) return json({ error: "Enter valid announcement dates." }, 400);
+      const starts = startDate ? startDate.toISOString() : null;
+      const ends = endDate ? endDate.toISOString() : null;
       if (starts && ends && new Date(ends) <= new Date(starts)) return json({ error: "End date must be after start date." }, 400);
       const { data, error } = await admin.from("announcements").insert({ title, body: message, active: true, starts_at: starts, ends_at: ends }).select("*").single();
       if (error) throw error;
