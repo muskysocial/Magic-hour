@@ -131,14 +131,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "public_config") {
-      const [settingsResult, featureResult] = await Promise.all([
+      const now = new Date().toISOString();
+      const [settingsResult, featureResult, announcementResult] = await Promise.all([
         admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","maintenance_mode"]),
-        admin.from("mh_site_features").select("tool_id,enabled,access_tier,coin_cost,sort_order").order("sort_order")
+        admin.from("mh_site_features").select("tool_id,enabled,access_tier,coin_cost,sort_order").order("sort_order"),
+        admin.from("announcements").select("id,title,body,starts_at,ends_at").eq("active",true).or("starts_at.is.null,starts_at.lte."+now).or("ends_at.is.null,ends_at.gt."+now).order("created_at",{ascending:false}).limit(5)
       ]);
       if (settingsResult.error) throw settingsResult.error;
       if (featureResult.error) throw featureResult.error;
+      if (announcementResult.error) throw announcementResult.error;
       const settings = Object.fromEntries((settingsResult.data || []).map((x: any) => [x.key, x.value]));
-      return json({ settings, features: featureResult.data || [] });
+      return json({ settings, features: featureResult.data || [], announcements: announcementResult.data || [] });
     }
     await requireAdmin(req);
     if (action === "dashboard") return json(await dashboard());
