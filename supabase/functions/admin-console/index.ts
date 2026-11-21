@@ -30,6 +30,17 @@ async function requireAdmin(req: Request) {
   if (error || !data || !["admin", "owner", "super_admin"].includes(data.role)) throw new Error("Admin access denied.");
   return user;
 }
+async function findAuthUserByEmail(email: string) {
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 500 });
+    if (error) throw error;
+    const users = data.users || [];
+    const match = users.find((u: any) => (u.email || "").toLowerCase() === email);
+    if (match) return match;
+    if (users.length < 500) break;
+  }
+  return null;
+}
 async function count(table: string, filter?: (q: any) => any) {
   let q = admin.from(table).select("*", { count: "exact", head: true });
   if (filter) q = filter(q);
@@ -341,9 +352,7 @@ Deno.serve(async (req: Request) => {
       const amount = Math.trunc(Number(body.amount));
       const description = String(body.description || "Admin wallet adjustment").trim().slice(0,240);
       if (!email || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) > 100000000) return json({ error: "Enter a valid account email and a non-zero coin amount." }, 400);
-      const { data: authData, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      if (authError) throw authError;
-      const target = (authData.users || []).find((u: any) => (u.email || "").toLowerCase() === email);
+      const target = await findAuthUserByEmail(email);
       if (!target) return json({ error: "No registered account was found for that email." }, 404);
       const reference = "admin-" + crypto.randomUUID();
       const { data: balance, error } = await admin.rpc("mh_admin_adjust_wallet", { p_user_id: target.id, p_amount: amount, p_description: description, p_reference: reference });
@@ -356,9 +365,7 @@ Deno.serve(async (req: Request) => {
       const plan = String(body.plan_name || "").trim().slice(0,80);
       const days = Math.max(1, Math.min(3650, Math.trunc(Number(body.days) || 30)));
       if (!email || !plan) return json({ error: "Account email and plan name are required." }, 400);
-      const { data: authData, error: authError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      if (authError) throw authError;
-      const target = (authData.users || []).find((u: any) => (u.email || "").toLowerCase() === email);
+      const target = await findAuthUserByEmail(email);
       if (!target) return json({ error: "No registered account was found for that email." }, 404);
       const now = new Date(), expires = new Date(now.getTime() + days * 86400000);
       const { data, error } = await admin.from("mh_memberships").upsert({ user_id: target.id, plan_key: plan.toLowerCase().replace(/[^a-z0-9]+/g,"-"), plan_name: plan, started_at: now.toISOString(), expires_at: expires.toISOString(), unlimited_generations: !!body.unlimited_generations, unlimited_duration: !!body.unlimited_duration, updated_at: now.toISOString() }, { onConflict: "user_id" }).select("*").single();
