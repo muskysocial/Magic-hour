@@ -151,10 +151,10 @@ Deno.serve(async (req: Request) => {
         user_id: user?.id || null,
         user_agent: String(req.headers.get("user-agent") || "").slice(0, 300)
       };
-      const { data: exists, error: findError } = await admin.from("ms_guest_visitors").select("visitor_id").eq("visitor_id", visitorId).maybeSingle();
+      const { data: exists, error: findError } = await admin.from("ms_guest_visitors").select("visitor_id,visits").eq("visitor_id", visitorId).maybeSingle();
       if (findError) throw findError;
       const result = exists
-        ? await admin.from("ms_guest_visitors").update(record).eq("visitor_id", visitorId)
+        ? await admin.from("ms_guest_visitors").update({ ...record, visits: Number(exists.visits || 0) + (body.visit_start === true ? 1 : 0) }).eq("visitor_id", visitorId)
         : await admin.from("ms_guest_visitors").insert({ ...record, first_seen_at: new Date().toISOString(), visits: 1 });
       if (result.error) throw result.error;
       return json({ ok: true });
