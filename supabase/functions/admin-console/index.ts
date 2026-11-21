@@ -167,7 +167,7 @@ Deno.serve(async (req: Request) => {
     if (action === "public_config") {
       const now = new Date().toISOString();
       const [settingsResult, featureResult, announcementResult] = await Promise.all([
-        admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","maintenance_mode","brand_name","logo_url","favicon_url","accent_color","social_image_url"]),
+        admin.from("mh_site_settings").select("key,value").in("key", ["announcement","homepage_headline","support_email","maintenance_mode","brand_name","logo_url","favicon_url","accent_color","social_image_url"]),
         admin.from("mh_site_features").select("tool_id,enabled,access_tier,coin_cost,sort_order").order("sort_order"),
         admin.from("announcements").select("id,title,body,starts_at,ends_at,created_at").eq("active",true).order("created_at",{ascending:false}).limit(100)
       ]);
@@ -353,7 +353,7 @@ Deno.serve(async (req: Request) => {
       const allowed: Record<string, unknown> = {};
       if ("announcement" in s) allowed.announcement = String(s.announcement || "").slice(0,240);
       if ("homepage_headline" in s) allowed.homepage_headline = String(s.homepage_headline || "").slice(0,140);
-      if ("support_email" in s) allowed.support_email = String(s.support_email || "").slice(0,254);
+      if ("support_email" in s) { const email = String(s.support_email || "").trim(); if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Enter a valid support email address." }, 400); allowed.support_email = email.slice(0,254); }
       if ("maintenance_mode" in s) allowed.maintenance_mode = !!s.maintenance_mode;
       if ("brand_name" in s) allowed.brand_name = String(s.brand_name || "Magic Hour").slice(0,80);
       for (const key of ["logo_url","favicon_url","social_image_url"]) {
