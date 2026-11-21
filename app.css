@@ -538,3 +538,8 @@ body{font-size:14px}
 .admin-room-panel .admin-campaign-form label{min-width:0}
 .admin-room-panel .admin-campaign-form input,.admin-room-panel .admin-campaign-form select,.admin-room-panel .admin-campaign-form textarea{max-width:100%}
 @media(max-width:620px){.admin-room-card select,.admin-room-card input[type=number]{max-width:100%}.admin-room-panel .admin-table-wrap{overflow-x:auto}.admin-room-panel .admin-table{min-width:680px}}
+
+.brand-custom-logo{display:block;width:34px;height:34px;object-fit:contain;border-radius:9px}
+.admin-campaign-row .secondary-btn{flex:0 0 auto;white-space:nowrap}
+.admin-campaign-row small{overflow-wrap:anywhere}
+.admin-room-panel [data-admin-issue],.admin-room-panel [data-support-ticket]{width:100%}
