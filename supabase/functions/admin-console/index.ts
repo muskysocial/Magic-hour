@@ -408,8 +408,15 @@ Deno.serve(async (req: Request) => {
       if (!email || !plan) return json({ error: "Account email and plan name are required." }, 400);
       const target = await findAuthUserByEmail(email);
       if (!target) return json({ error: "No registered account was found for that email." }, 404);
-      const now = new Date(), expires = new Date(now.getTime() + days * 86400000);
-      const { data, error } = await admin.from("mh_memberships").upsert({ user_id: target.id, plan_key: plan.toLowerCase().replace(/[^a-z0-9]+/g,"-"), plan_name: plan, started_at: now.toISOString(), expires_at: expires.toISOString(), unlimited_generations: !!body.unlimited_generations, unlimited_duration: !!body.unlimited_duration, updated_at: now.toISOString() }, { onConflict: "user_id" }).select("*").single();
+      const now = new Date();
+      const { data: currentMembership, error: currentMembershipError } = await admin.from("mh_memberships").select("started_at,expires_at").eq("user_id",target.id).maybeSingle();
+      if (currentMembershipError) throw currentMembershipError;
+      const currentExpiry = currentMembership?.expires_at ? new Date(currentMembership.expires_at) : null;
+      const isActive = !!currentExpiry && currentExpiry.getTime() > now.getTime();
+      const renewalBase = isActive ? currentExpiry! : now;
+      const expires = new Date(renewalBase.getTime() + days * 86400000);
+      const startedAt = isActive && currentMembership?.started_at ? currentMembership.started_at : now.toISOString();
+      const { data, error } = await admin.from("mh_memberships").upsert({ user_id: target.id, plan_key: plan.toLowerCase().replace(/[^a-z0-9]+/g,"-"), plan_name: plan, started_at: startedAt, expires_at: expires.toISOString(), unlimited_generations: !!body.unlimited_generations, unlimited_duration: !!body.unlimited_duration, updated_at: now.toISOString() }, { onConflict: "user_id" }).select("*").single();
       if (error) throw error;
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "membership.grant", target: target.id, details: plan + " for " + days + " days" });
       return json({ membership: data });
