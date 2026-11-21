@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+const OWNER_EMAIL = "ugohjeremiah16@gmail.com";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -24,13 +25,14 @@ async function identify(req: Request) {
 async function requireAdmin(req: Request) {
   const user = await identify(req);
   if (!user) throw new Error("Sign in required.");
+  if ((user.email || "").toLowerCase() !== OWNER_EMAIL) throw new Error("Admin access denied.");
   const { data, error } = await admin.from("admin_users").select("role").eq("user_id", user.id).maybeSingle();
   if (error || !data || !["admin", "owner", "super_admin"].includes(data.role)) throw new Error("Admin access denied.");
   return user;
 }
-function validDate(value: unknown, fallback?: string) {
+function validDate(value: unknown) {
   if (value === null || value === "") return null;
-  const date = new Date(String(value || fallback || ""));
+  const date = new Date(String(value));
   if (!Number.isFinite(date.getTime())) throw new Error("Invalid campaign date.");
   return date.toISOString();
 }
@@ -85,7 +87,7 @@ Deno.serve(async (req: Request) => {
       const link = String(body.link_url || "").trim();
       if (link && !/^https:\/\//i.test(link)) return json({ error: "Campaign links must use HTTPS." }, 400);
       const record = { title, message, asset_id: assetId, link_url: link || null, placements,
-        starts_at: startsAt, ends_at: endsAt, status: body.status === "active" ? "active" : "draft",
+        starts_at: startsAt, ends_at: endsAt, status: "draft",
         priority: Math.max(0, Math.min(1000, Number(body.priority) || 0)), updated_at: new Date().toISOString() };
       const result = id
         ? await admin.from("mh_site_campaigns").update(record).eq("id", id).select("*").single()
