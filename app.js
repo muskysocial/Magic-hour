@@ -561,7 +561,7 @@ async function loadAccountData(){
   if(!projects.error)userProjects=projects.data||[];else console.warn("Projects load:",projects.error.message);
   if(!assets.error){userAssets=await Promise.all((assets.data||[]).map(async a=>{const {data:signed}=await supabase.storage.from("magic-hour-assets").createSignedUrl(a.storage_path,3600);return {...a,signedUrl:signed?.signedUrl||""};}));}else console.warn("Assets load:",assets.error.message);
   if(!transactions.error)walletTransactions=transactions.data||[];else console.warn("Wallet history:",transactions.error.message);
-  membershipInfo=!membership.error&&membership.data&&new Date(membership.data.expires_at)>new Date()?membership.data:null;
+  membershipInfo=!membership.error&&membership.data&&(membership.data.unlimited_duration||!!membership.data.expires_at&&new Date(membership.data.expires_at)>new Date())?membership.data:null;
   userShipments=!shipments.error?(shipments.data||[]):[];
   const utcDay=new Date().toISOString().slice(0,10);
   dailyClaimAvailable=!walletTransactions.some(t=>t.description==="Daily coin claim"&&String(t.created_at).slice(0,10)===utcDay);
