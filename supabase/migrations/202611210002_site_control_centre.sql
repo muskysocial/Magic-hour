@@ -96,8 +96,9 @@ create policy "Users read their own Magic Hour support tickets"
   on public.mh_support_tickets for select to authenticated
   using (user_id = (select auth.uid()));
 
--- The browser can read only rows allowed by the owner-only RLS policies.
--- Privileged writes are performed exclusively by the authenticated Edge Function.
+-- Browser reads are restricted by RLS: admin-only control records stay owner-only,
+-- while signed-in customers can read only their own support tickets. Privileged writes
+-- are performed exclusively by the authenticated Edge Function.
 revoke all on public.mh_site_settings, public.mh_site_features, public.mh_admin_audit_log,
   public.mh_feature_experiments, public.mh_support_tickets from anon;
 grant select on public.mh_site_settings, public.mh_site_features, public.mh_admin_audit_log,
