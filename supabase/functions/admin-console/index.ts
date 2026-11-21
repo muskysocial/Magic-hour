@@ -277,20 +277,27 @@ Deno.serve(async (req: Request) => {
           counts: { registered_users: allAuthUsers.length }, users, guests: guests.data || [] });
       }
       if (room === "Finance") {
-        const [transactions, memberships, txCount, memberCount, wallets] = await Promise.all([
+        const [transactions, memberships, txCount, memberCount, wallets, payments, paymentCount, successfulPaymentCount, apiBilling] = await Promise.all([
           admin.from("mh_wallet_transactions").select("created_at,user_id,transaction_type,amount,description,reference").order("created_at", { ascending: false }).limit(100),
-          admin.from("mh_memberships").select("user_id,plan_name,started_at,expires_at").order("started_at", { ascending: false }).limit(100),
-          count("mh_wallet_transactions"), count("mh_memberships", q => q.gt("expires_at", new Date().toISOString())),
-          admin.from("mh_wallets").select("balance")
+          admin.from("mh_memberships").select("user_id,plan_name,started_at,expires_at,unlimited_generations,unlimited_duration").order("started_at", { ascending: false }).limit(100),
+          count("mh_wallet_transactions"), count("mh_memberships", q => q.or("unlimited_duration.eq.true,expires_at.gt."+new Date().toISOString())),
+          admin.from("mh_wallets").select("balance"),
+          admin.from("mh_payment_orders").select("id,user_id,reference,product_key,amount_kobo,coins,status,paystack_transaction_id,created_at,paid_at").order("created_at",{ascending:false}).limit(100),
+          count("mh_payment_orders"), count("mh_payment_orders",q=>q.eq("status","success")),
+          admin.from("ms_api_billing_transactions").select("id,user_id,endpoint,amount,status,created_at,refunded_at").order("created_at",{ascending:false}).limit(100)
         ]);
         if (transactions.error) throw transactions.error; if (memberships.error) throw memberships.error; if (wallets.error) throw wallets.error;
-        const ids = [...new Set([...(transactions.data || []).map((x: any) => x.user_id), ...(memberships.data || []).map((x: any) => x.user_id)])];
+        if (payments.error) throw payments.error; if (apiBilling.error) throw apiBilling.error;
+        const ids = [...new Set([...(transactions.data || []).map((x: any) => x.user_id), ...(memberships.data || []).map((x: any) => x.user_id), ...(payments.data || []).map((x: any) => x.user_id), ...(apiBilling.data || []).map((x: any) => x.user_id)])];
         const users = await findAuthUsersByIds(ids);
         const email = new Map(users.map((u: any) => [u.id, u.email || ""]));
-        return json({ loaded: true, description: "Actual wallet ledger and membership records; revenue is not estimated from coin movements.",
-          counts: { transactions: txCount, memberships: memberCount, coins: (wallets.data || []).reduce((n: number, x: any) => n + Number(x.balance || 0), 0) },
+        const paymentRows = (payments.data || []).map((x: any) => ({...x,email:email.get(x.user_id)||x.user_id,amount_ngn:"₦"+(Number(x.amount_kobo||0)/100).toLocaleString("en-NG",{minimumFractionDigits:2,maximumFractionDigits:2})}));
+        const recentPaidNgn = paymentRows.filter((x:any)=>x.status==="success").reduce((sum:number,x:any)=>sum+Number(x.amount_kobo||0)/100,0);
+        return json({ loaded: true, description: "Actual wallet ledger, Paystack payment orders, API billing records and membership status. Revenue is calculated only from successful payment orders.",
+          counts: { transactions: txCount, memberships: memberCount, coins: (wallets.data || []).reduce((n: number, x: any) => n + Number(x.balance || 0), 0), payment_orders: paymentCount, successful_payments: successfulPaymentCount, recent_paid_ngn: recentPaidNgn },
           transactions: (transactions.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })),
-          memberships: (memberships.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })) });
+          memberships: (memberships.data || []).map((x: any) => ({ ...x, email: email.get(x.user_id) || x.user_id })),
+          payments: paymentRows, api_billing: (apiBilling.data || []).map((x:any)=>({...x,email:email.get(x.user_id)||x.user_id})) });
       }
       if (room === "API Centre") {
         const [keys, usage] = await Promise.all([
