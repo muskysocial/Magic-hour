@@ -241,7 +241,7 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         return json({ loaded: true, description: "Operational issue register and resolution history.", issues: data || [] });
       }
-      if (room === "Campaigns") {
+      if (room === "Announcements") {
         const { data, error } = await admin.from("announcements").select("*").order("created_at", { ascending: false }).limit(100);
         if (error) throw error;
         return json({ loaded: true, description: "Manage text announcements and media campaigns.", announcements: data || [] });
