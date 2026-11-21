@@ -68,3 +68,7 @@ create policy "Admins can delete Magic Hour campaigns"
     and exists (select 1 from public.admin_users au
       where au.user_id = (select auth.uid()) and au.role in ('admin','owner','super_admin'))
   );
+
+revoke all on public.mh_site_campaigns from anon;
+grant select on public.mh_site_campaigns to authenticated;
+grant all on public.mh_site_campaigns to service_role;
