@@ -1,5 +1,7 @@
 -- Campaigns are private admin-managed records. Public reads are served only
 -- through campaign-service, which signs short-lived URLs for active assets.
+-- Both the owner email and the existing admin_users row are required for direct
+-- authenticated access; privileged service-role operations are checked in the Edge Function.
 create table if not exists public.mh_site_campaigns (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) between 1 and 120),
@@ -24,42 +26,45 @@ create index if not exists mh_site_campaigns_public_idx
 create index if not exists mh_site_campaigns_asset_idx
   on public.mh_site_campaigns(asset_id);
 alter table public.mh_site_campaigns enable row level security;
+
 drop policy if exists "Admins can read Magic Hour campaigns" on public.mh_site_campaigns;
 create policy "Admins can read Magic Hour campaigns"
   on public.mh_site_campaigns for select to authenticated
-  using (exists (
-    select 1 from public.admin_users au
-    where au.user_id = (select auth.uid())
-      and au.role in ('admin','owner','super_admin')
-  ));
+  using (
+    lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'ugohjeremiah16@gmail.com'
+    and exists (select 1 from public.admin_users au
+      where au.user_id = (select auth.uid()) and au.role in ('admin','owner','super_admin'))
+  );
+
 drop policy if exists "Admins can create Magic Hour campaigns" on public.mh_site_campaigns;
 create policy "Admins can create Magic Hour campaigns"
   on public.mh_site_campaigns for insert to authenticated
   with check (
-    created_by = (select auth.uid()) and exists (
-      select 1 from public.admin_users au
-      where au.user_id = (select auth.uid())
-        and au.role in ('admin','owner','super_admin')
-    )
+    created_by = (select auth.uid())
+    and lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'ugohjeremiah16@gmail.com'
+    and exists (select 1 from public.admin_users au
+      where au.user_id = (select auth.uid()) and au.role in ('admin','owner','super_admin'))
   );
+
 drop policy if exists "Admins can update Magic Hour campaigns" on public.mh_site_campaigns;
 create policy "Admins can update Magic Hour campaigns"
   on public.mh_site_campaigns for update to authenticated
-  using (exists (
-    select 1 from public.admin_users au
-    where au.user_id = (select auth.uid())
-      and au.role in ('admin','owner','super_admin')
-  ))
-  with check (exists (
-    select 1 from public.admin_users au
-    where au.user_id = (select auth.uid())
-      and au.role in ('admin','owner','super_admin')
-  ));
+  using (
+    lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'ugohjeremiah16@gmail.com'
+    and exists (select 1 from public.admin_users au
+      where au.user_id = (select auth.uid()) and au.role in ('admin','owner','super_admin'))
+  )
+  with check (
+    lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'ugohjeremiah16@gmail.com'
+    and exists (select 1 from public.admin_users au
+      where au.user_id = (select auth.uid()) and au.role in ('admin','owner','super_admin'))
+  );
+
 drop policy if exists "Admins can delete Magic Hour campaigns" on public.mh_site_campaigns;
 create policy "Admins can delete Magic Hour campaigns"
   on public.mh_site_campaigns for delete to authenticated
-  using (exists (
-    select 1 from public.admin_users au
-    where au.user_id = (select auth.uid())
-      and au.role in ('admin','owner','super_admin')
-  ));
+  using (
+    lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'ugohjeremiah16@gmail.com'
+    and exists (select 1 from public.admin_users au
+      where au.user_id = (select auth.uid()) and au.role in ('admin','owner','super_admin'))
+  );
