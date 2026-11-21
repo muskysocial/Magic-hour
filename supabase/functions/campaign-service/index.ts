@@ -86,13 +86,15 @@ Deno.serve(async (req: Request) => {
       if (endsAt && new Date(endsAt) <= new Date(startsAt)) return json({ error: "End date must be after the start date." }, 400);
       const link = String(body.link_url || "").trim();
       if (link && !/^https:\/\//i.test(link)) return json({ error: "Campaign links must use HTTPS." }, 400);
+      if (id && !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid campaign identifier." }, 400);
       const record = { title, message, asset_id: assetId, link_url: link || null, placements,
-        starts_at: startsAt, ends_at: endsAt, status: "draft",
+        starts_at: startsAt, ends_at: endsAt,
         priority: Math.max(0, Math.min(1000, Number(body.priority) || 0)), updated_at: new Date().toISOString() };
       const result = id
         ? await admin.from("mh_site_campaigns").update(record).eq("id", id).select("*").single()
-        : await admin.from("mh_site_campaigns").insert({ ...record, created_by: user.id }).select("*").single();
+        : await admin.from("mh_site_campaigns").insert({ ...record, status: "draft", created_by: user.id }).select("*").single();
       if (result.error) throw result.error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: user.id, actor_email: OWNER_EMAIL, action: id ? "campaign.update" : "campaign.create", target: result.data.id, details: title });
       return json({ campaign: result.data });
     }
     if (action === "set_status") {
@@ -101,6 +103,7 @@ Deno.serve(async (req: Request) => {
       if (!/^[0-9a-f-]{36}$/i.test(id) || !["draft","active","paused","archived"].includes(status)) return json({ error: "Invalid campaign status." }, 400);
       const { data, error } = await admin.from("mh_site_campaigns").update({ status, updated_at: new Date().toISOString() }).eq("id", id).select("*").single();
       if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: user.id, actor_email: OWNER_EMAIL, action: "campaign.status", target: id, details: status });
       return json({ campaign: data });
     }
     if (action === "delete") {
@@ -108,6 +111,7 @@ Deno.serve(async (req: Request) => {
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Invalid campaign." }, 400);
       const { error } = await admin.from("mh_site_campaigns").delete().eq("id", id);
       if (error) throw error;
+      await admin.from("mh_admin_audit_log").insert({ actor_user_id: user.id, actor_email: OWNER_EMAIL, action: "campaign.delete", target: id, details: "Deleted campaign" });
       return json({ ok: true });
     }
     return json({ error: "Unknown action." }, 400);
