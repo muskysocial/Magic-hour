@@ -25,6 +25,7 @@ create index if not exists mh_site_campaigns_public_idx
   on public.mh_site_campaigns(status, starts_at, ends_at, priority desc);
 create index if not exists mh_site_campaigns_asset_idx
   on public.mh_site_campaigns(asset_id);
+create index if not exists mh_site_campaigns_created_by_idx on public.mh_site_campaigns(created_by);
 alter table public.mh_site_campaigns enable row level security;
 
 drop policy if exists "Admins can read Magic Hour campaigns" on public.mh_site_campaigns;
