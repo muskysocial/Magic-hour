@@ -312,7 +312,9 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "save_settings") {
       const s = body.settings || {};
-      const publicUrls = [s.logo_url,s.favicon_url,s.social_image_url].filter(Boolean);\n      if (publicUrls.some((v: any) => !/^https:\\/\\//i.test(String(v)))) return json({ error: "Brand image URLs must use HTTPS." }, 400);\n      const entries = Object.entries({ announcement: String(s.announcement || "").slice(0,240), homepage_headline: String(s.homepage_headline || "").slice(0,140), support_email: String(s.support_email || "").slice(0,254), maintenance_mode: !!s.maintenance_mode, brand_name: String(s.brand_name || "Magic Hour").slice(0,80), logo_url: String(s.logo_url || "").slice(0,2048), favicon_url: String(s.favicon_url || "").slice(0,2048), accent_color: /^#[0-9a-f]{6}$/i.test(String(s.accent_color||"")) ? s.accent_color : "#a879ef", social_image_url: String(s.social_image_url || "").slice(0,2048) });
+      const publicUrls = [s.logo_url,s.favicon_url,s.social_image_url].filter(Boolean);
+      if (publicUrls.some((v: any) => !/^https:\\/\\//i.test(String(v)))) return json({ error: "Brand image URLs must use HTTPS." }, 400);
+      const entries = Object.entries({ announcement: String(s.announcement || "").slice(0,240), homepage_headline: String(s.homepage_headline || "").slice(0,140), support_email: String(s.support_email || "").slice(0,254), maintenance_mode: !!s.maintenance_mode, brand_name: String(s.brand_name || "Magic Hour").slice(0,80), logo_url: String(s.logo_url || "").slice(0,2048), favicon_url: String(s.favicon_url || "").slice(0,2048), accent_color: /^#[0-9a-f]{6}$/i.test(String(s.accent_color||"")) ? s.accent_color : "#a879ef", social_image_url: String(s.social_image_url || "").slice(0,2048) });
       for (const [key, value] of entries) {
         const { error } = await admin.from("mh_site_settings").upsert({ key, value, updated_by: (await identify(req))?.id, updated_at: new Date().toISOString() }, { onConflict: "key" });
         if (error) throw error;
@@ -323,7 +325,10 @@ Deno.serve(async (req: Request) => {
     if (action === "set_feature") {
       const tool = String(body.tool_id || "").slice(0,80);
       if (!/^[a-z0-9-]+$/i.test(tool)) return json({ error: "Invalid tool identifier." }, 400);
-      const { data: currentFeature, error: currentFeatureError } = await admin.from("mh_site_features").select("enabled,access_tier,coin_cost").eq("tool_id",tool).maybeSingle();\n      if (currentFeatureError) throw currentFeatureError;\n      const featureUpdate = { tool_id: tool, enabled: typeof body.enabled === "boolean" ? body.enabled : (currentFeature?.enabled ?? true), access_tier: ["free","pro","restricted"].includes(body.access_tier) ? body.access_tier : (currentFeature?.access_tier || "free"), coin_cost: body.coin_cost !== undefined ? Math.max(0, Math.min(100000, Number(body.coin_cost) || 0)) : (currentFeature?.coin_cost || 0), updated_at: new Date().toISOString() };\n      const { error } = await admin.from("mh_site_features").upsert(featureUpdate, { onConflict: "tool_id" });
+      const { data: currentFeature, error: currentFeatureError } = await admin.from("mh_site_features").select("enabled,access_tier,coin_cost").eq("tool_id",tool).maybeSingle();
+      if (currentFeatureError) throw currentFeatureError;
+      const featureUpdate = { tool_id: tool, enabled: typeof body.enabled === "boolean" ? body.enabled : (currentFeature?.enabled ?? true), access_tier: ["free","pro","restricted"].includes(body.access_tier) ? body.access_tier : (currentFeature?.access_tier || "free"), coin_cost: body.coin_cost !== undefined ? Math.max(0, Math.min(100000, Number(body.coin_cost) || 0)) : (currentFeature?.coin_cost || 0), updated_at: new Date().toISOString() };
+      const { error } = await admin.from("mh_site_features").upsert(featureUpdate, { onConflict: "tool_id" });
       if (error) throw error;
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "feature.toggle", target: tool, details: String(!!body.enabled) });
       return json({ ok: true });
@@ -367,7 +372,8 @@ Deno.serve(async (req: Request) => {
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.toggle", target: id, details: String(!!body.active) });
       return json({ announcement: data });
     }
-\n    if (action === "update_support_ticket") {
+
+    if (action === "update_support_ticket") {
       const id=String(body.id||""),status=String(body.status||"");
       if(!/^[0-9a-f-]{36}$/i.test(id)||!["open","in_progress","resolved"].includes(status))return json({error:"Invalid ticket update."},400);
       const {data,error}=await admin.from("mh_support_tickets").update({status,admin_reply:String(body.admin_reply||"").slice(0,5000),updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
