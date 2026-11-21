@@ -31,7 +31,14 @@ async function requireAdmin(req: Request) {
   return user;
 }
 async function listAuthUsers(): Promise<any[]> {
-  const allUsers: any[] = await listAuthUsers();
+  const allUsers: any[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 500 });
+    if (error) throw error;
+    const batch = data.users || [];
+    allUsers.push(...batch);
+    if (batch.length < 500) break;
+  }
   return allUsers;
 }
 async function findAuthUserByEmail(email: string) {
@@ -92,14 +99,7 @@ async function dashboard() {
   if (issuesResult.error) throw issuesResult.error;
   if (failedRecent.error) throw failedRecent.error;
 
-  const allUsers: any[] = [];
-  for (let page = 1; page <= 20; page++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 500 });
-    if (error) throw error;
-    const batch = data.users || [];
-    allUsers.push(...batch);
-    if (batch.length < 500) break;
-  }
+  const allUsers: any[] = await listAuthUsers();
   const ids = allUsers.map(u => u.id);
   const [walletRows, memberRows] = ids.length ? await Promise.all([
     admin.from("mh_wallets").select("user_id,balance").in("user_id", ids),
