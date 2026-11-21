@@ -348,7 +348,26 @@ Deno.serve(async (req: Request) => {
       await admin.from("mh_admin_audit_log").insert({ actor_user_id: (await identify(req))?.id, actor_email: OWNER_EMAIL, action: "announcement.toggle", target: id, details: String(!!body.active) });
       return json({ announcement: data });
     }
-\n    if (action === "save_announcement") {
+\n    if (action === "save_experiment") {
+      const name = String(body.name || "").trim().slice(0,120);
+      const description = String(body.description || "").trim().slice(0,500);
+      const traffic = Math.max(0,Math.min(100,Math.trunc(Number(body.traffic_percent)||0)));
+      if (!name) return json({error:"Experiment name is required."},400);
+      const variants = Array.isArray(body.variants) ? body.variants.slice(0,8).map((v:any)=>String(v).slice(0,60)) : ["control","variant-a"];
+      const {data,error}=await admin.from("mh_feature_experiments").insert({name,description,traffic_percent:traffic,variants,enabled:false}).select("*").single();
+      if(error)throw error;
+      await admin.from("mh_admin_audit_log").insert({actor_user_id:(await identify(req))?.id,actor_email:OWNER_EMAIL,action:"experiment.create",target:data.id,details:name});
+      return json({experiment:data});
+    }
+    if (action === "toggle_experiment") {
+      const id=String(body.id||"");
+      if(!/^[0-9a-f-]{36}$/i.test(id))return json({error:"Invalid experiment."},400);
+      const {data,error}=await admin.from("mh_feature_experiments").update({enabled:!!body.enabled,updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
+      if(error)throw error;
+      await admin.from("mh_admin_audit_log").insert({actor_user_id:(await identify(req))?.id,actor_email:OWNER_EMAIL,action:"experiment.toggle",target:id,details:String(!!body.enabled)});
+      return json({experiment:data});
+    }
+    if (action === "save_announcement") {
       const title = String(body.title || "").trim().slice(0,120), message = String(body.body || "").trim().slice(0,1000);
       if (!title || !message) return json({ error: "Announcement title and message are required." }, 400);
       const starts = body.starts_at ? new Date(String(body.starts_at)).toISOString() : null;
