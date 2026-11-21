@@ -524,3 +524,17 @@ body{font-size:14px}
 .campaign-public-copy p{margin:0 0 14px;color:#c7bfd3;font-size:13px;line-height:1.55}
 .campaign-public-copy .primary-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;text-decoration:none}
 @media(max-width:600px){.admin-campaign-dates{grid-template-columns:1fr}.admin-campaign-row{align-items:flex-start;flex-direction:column}.admin-campaign-actions{justify-content:flex-start}.campaign-home-card{grid-template-columns:105px 1fr}.campaign-home-card>img,.campaign-home-card>video{min-height:110px}.campaign-home-card>div{padding:10px}.campaign-home-card b{font-size:12px}.campaign-home-card p{font-size:10px}}
+
+.admin-toggle{display:flex;align-items:center;gap:8px;color:#d8d2e7;font-size:11px;white-space:nowrap}
+.admin-toggle input,.admin-campaign-placements input{accent-color:#a879ef}
+.admin-room-card select,.admin-room-card input[type=number]{display:block;width:100%;max-width:150px;min-height:34px;margin-top:5px;padding:6px 8px;border:1px solid rgba(161,145,196,.28);border-radius:8px;background:#100e17;color:#f5f1ff;font:inherit;font-size:11px}
+.admin-room-card label{display:block;margin-top:9px;color:#bdb5cc;font-size:10px}
+.admin-room-card{min-width:0}
+.admin-room-card>div{min-width:0}
+.admin-room-card p{overflow-wrap:anywhere}
+.admin-room-panel .admin-table-wrap{margin:12px 0 20px}
+.admin-room-panel .admin-section-title{margin-top:24px}
+.admin-room-panel .admin-issue-form,.admin-room-panel .admin-campaign-form{margin:16px 0}
+.admin-room-panel .admin-campaign-form label{min-width:0}
+.admin-room-panel .admin-campaign-form input,.admin-room-panel .admin-campaign-form select,.admin-room-panel .admin-campaign-form textarea{max-width:100%}
+@media(max-width:620px){.admin-room-card select,.admin-room-card input[type=number]{max-width:100%}.admin-room-panel .admin-table-wrap{overflow-x:auto}.admin-room-panel .admin-table{min-width:680px}}
