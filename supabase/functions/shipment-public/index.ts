@@ -43,7 +43,7 @@ Deno.serve(async(req:Request)=>{
   if(newlyPublished.length){
     await admin.from("ms_shipment_notifications").update({published_at:now.toISOString(),updated_at:now.toISOString()}).in("id",newlyPublished);
   }
-  const notifications=dueBots.map((n:any)=>({...n,published_at:n.published_at||now.toISOString(),sender_label:"Magic Hour Headquarters"}));
+  const notifications=dueBots.map((n:any)=>({...n,published_at:n.published_at||now.toISOString(),sender_label:s.carrier||n.bot_name||"Shipment Service"}));
   const clean={...s};delete clean.access_password_hash;delete clean.tracking_slug;
   const linked=await Promise.all((media||[]).map(async m=>{const {data}=await admin.storage.from("magic-hour-assets").createSignedUrl(m.storage_path,3600);return {file_name:m.file_name,mime_type:m.mime_type,media_kind:m.media_kind,url:data?.signedUrl||null};}));
   return json({ok:true,shipment:clean,events:events||[],media:linked,messages:messages||[],notifications});
