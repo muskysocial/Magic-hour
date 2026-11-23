@@ -116,6 +116,7 @@ async function initializeAppAuth(){
       sessionState = "unknown";
       app.dataset.auth = sessionState;
       console.warn("Supabase session check timed out; showing sign-in instead of blocking startup.");
+      render();
     } else {
       const {data,error} = result;
       sessionState = error ? "unknown" : (data.session ? "signed-in" : "signed-out");
@@ -132,6 +133,7 @@ async function initializeAppAuth(){
     sessionState = "offline";
     app.dataset.auth = sessionState;
     console.warn("Supabase session unavailable:",error);
+    render();
   }
   refreshAdminAccess().then(()=>{sendVisitorHeartbeat();render();});
   setInterval(sendVisitorHeartbeat,60000);
@@ -716,7 +718,6 @@ ${phoneMode?(authMode==="phone-verify"?`<label>Verification code<input name="otp
 ${phoneMode?`<button class="text-btn auth-switch" data-auth-mode="login">Back to email sign in</button>`:`<button class="text-btn auth-switch" data-auth-mode="${authMode==="login"?"signup":"login"}">${authMode==="login"?"New to magic hour? Create an account":"Already have an account? Sign in"}</button>`}
 ${authMode==="login"?`<button class="text-btn auth-reset" data-auth-reset>Forgot password?</button>`:""}<p class="auth-message" role="status">${esc(authNotice)}</p><p class="auth-legal">By continuing, you agree to use magic hour responsibly.</p></div></div>`;const googleButton=app.querySelector("[data-auth-google]");if(googleButton){googleButton.addEventListener("click",async event=>{event.preventDefault();event.stopPropagation();googleButton.disabled=true;googleButton.textContent="Connecting to Google…";authNotice="";try{const {data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:"https://magichour-black.vercel.app",skipBrowserRedirect:true}});if(error)throw error;if(!data?.url)throw new Error("No Google authorization URL was returned. Confirm Google is enabled in Supabase Auth → Providers.");window.location.href=data.url;}catch(error){authNotice="Google sign-in failed: "+(error?.message||String(error));renderAuth();}});}}
 
-loadWorldwideShipmentCountries();
 function render(){if(new URLSearchParams(location.search).has("shipment")){app.innerHTML=renderPublicShipment();if(publicShipmentData)initPublicShipmentMap(publicShipmentData);return;}if(!currentUser){renderAuth();return;}if(!workspaceStateRestored)restoreWorkspaceState();const body=publicSiteConfig.settings?.maintenance_mode&&!isAdmin?renderMaintenance():activeTool?renderTool():page==="Home"?renderHome():page==="New chat"?renderChat():(page==="Admin dashboard"||page==="Site Control Centre")?renderAdminDashboard():renderGeneric();app.innerHTML=`
 <div class="shell">
 <header class="topbar"><button class="icon-btn" data-action="menu" aria-label="Toggle menu">${iconSvg("menu",19)}</button><div class="brand">${renderBrandMarkup()}</div><div class="top-spacer"></div><button class="install-app" id="install-app" hidden>Install app</button><button class="wallet" data-modal="wallet" aria-label="Coin wallet, ${walletBalance} coins${dailyClaimAvailable?", daily gift available":""}"><span class="coin">${iconSvg("coin",17)}</span><strong>${walletBalance.toLocaleString()}</strong>${dailyClaimAvailable?`<span class="daily-gift-indicator" title="Daily coins ready to claim">${iconSvg("gift",15)}</span>`:""}<span class="add-coin">+</span></button><button class="icon-btn notif" data-page="Notifications" aria-label="Notifications">${iconSvg("bell",18)}</button><button class="icon-btn account-btn" data-action="account" aria-label="Account">${iconSvg("user",19)}</button></header>
