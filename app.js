@@ -620,80 +620,55 @@ async function loadAccountData(){
 }
 let shipmentMapInstance=null,shipmentMapTimer=null,shipmentMapSignature="";
 function loadShipmentMapLibrary(){return new Promise((resolve,reject)=>{if(window.L)return resolve();const cssUrls=["https://unpkg.com/leaflet@1.9.4/dist/leaflet.css","https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"];if(!document.querySelector("link[data-shipment-leaflet]")){const link=document.createElement("link");link.rel="stylesheet";link.href=cssUrls[0];link.dataset.shipmentLeaflet="1";link.onerror=()=>{link.href=cssUrls[1];};document.head.appendChild(link);}const urls=["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js","https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"];let index=0;const load=()=>{if(window.L)return resolve();if(index>=urls.length)return reject(new Error("Map library could not be loaded. Check your internet connection."));let script=document.querySelector("script[data-shipment-leaflet]");if(script)script.remove();script=document.createElement("script");script.src=urls[index++];script.dataset.shipmentLeaflet="1";script.onload=()=>window.L?resolve():load();script.onerror=load;document.head.appendChild(script);};load();});}
-async function shipmentGeocodeResult(place){let lastError;for(const url of ["https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="+encodeURIComponent(place),"https://photon.komoot.io/api/?limit=1&q="+encodeURIComponent(place)]){try{const response=await fetch(url,{headers:{Accept:"application/json"}});if(!response.ok)throw new Error("Location lookup unavailable");const body=await response.json();const row=Array.isArray(body)?body[0]:body.features?.[0]?{lat:body.features[0].geometry.coordinates[1],lon:body.features[0].geometry.coordinates[0],boundingbox:null}:null;if(row)return row;}catch(error){lastError=error;}}throw new Error("Could not locate "+place+". "+(lastError?.message||"Map search unavailable"));}async function shipmentGeocode(place){const row=await shipmentGeocodeResult(place);return [Number(row.lat),Number(row.lon)];}
-function shipmentPointAt(points,p){if(points.length<2)return points[0];const lengths=[];let total=0;for(let i=1;i<points.length;i++){const d=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);lengths.push(d);total+=d;}let target=total*p,acc=0;for(let i=0;i<lengths.length;i++){if(acc+lengths[i]>=target){const t=lengths[i]?(target-acc)/lengths[i]:0;return [points[i][0]+(points[i+1][0]-points[i][0])*t,points[i][1]+(points[i+1][1]-points[i][1])*t];}acc+=lengths[i];}return points[points.length-1];}
+function shipmentCoordinates(x,side){
+ const city=x[side+"_city"]||"",country=x[side+"_country"]||"",code=x[side+"_airport_code"]||"";
+ return resolveShipmentPlace(city,country,code);
+}
 async function initPublicShipmentMap(data){
-const host=document.getElementById("shipment-live-map");if(!host)return;const x=data.shipment;
-const signature=[x.id,x.origin,x.destination,x.origin_country,x.destination_country,x.origin_city,x.destination_city,x.current_lat,x.current_lng,(data.events||[]).map(e=>e.id+e.event_type+e.event_details).join("|")].join("::");
-if(shipmentMapSignature===signature&&shipmentMapInstance){shipmentMapInstance.invalidateSize();return;}
-if(shipmentMapTimer)clearInterval(shipmentMapTimer);if(shipmentMapInstance){shipmentMapInstance.remove();shipmentMapInstance=null;}shipmentMapSignature=signature;
-host.innerHTML='<div class="shipment-map-loading">Loading country map, cities and direct route…</div>';
-try{
-await loadShipmentMapLibrary();
-const originLabel=[x.origin_city,x.origin_country].filter(Boolean).join(", ")||x.origin;
-const destinationLabel=[x.destination_city,x.destination_country].filter(Boolean).join(", ")||x.destination;
-const [from,to]=await Promise.all([shipmentGeocode(originLabel),shipmentGeocode(destinationLabel)]);
-let points=[from,to],routeDistance=null,routeDuration=null;if(x.transport_mode==="air"){const a=from,b=to;const dx=b[1]-a[1],dy=b[0]-a[0],bend=Math.min(18,Math.max(2,Math.sqrt(dx*dx+dy*dy)*0.16));const mx=(a[1]+b[1])/2,my=(a[0]+b[0])/2;const len=Math.sqrt(dx*dx+dy*dy)||1;const cx=mx-(dy/len)*bend,cy=my+(dx/len)*bend;points=[];for(let i=0;i<=80;i++){const t=i/80,u=1-t;points.push([u*u*a[0]+2*u*t*cy+t*t*b[0],u*u*a[1]+2*u*t*cx+t*t*b[1]]);}}
-if(x.transport_mode==="road"){
-const routeUrl="https://router.project-osrm.org/route/v1/driving/"+from[1]+","+from[0]+";"+to[1]+","+to[0]+"?overview=full&geometries=geojson&steps=true";
-const response=await fetch(routeUrl);if(!response.ok)throw new Error("Road route service unavailable");const routeData=await response.json();
-if(routeData.routes?.[0]?.geometry?.coordinates){points=routeData.routes[0].geometry.coordinates.map(p=>[p[1],p[0]]);routeDistance=routeData.routes[0].distance;routeDuration=routeData.routes[0].duration;}
-}
-const L=window.L;
-shipmentMapInstance=L.map(host,{scrollWheelZoom:true,zoomControl:true}).setView(from,6);
-const mapAttribution='&copy; OpenStreetMap contributors &copy; Esri';let tileProviderIndex=-1;let activeTiles=null;const tileProviders=[()=>L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:mapAttribution,crossOrigin:true,keepBuffer:4}),()=>L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:mapAttribution,crossOrigin:true,keepBuffer:4}),()=>L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,attribution:mapAttribution,crossOrigin:true,keepBuffer:4})];const useNextTileProvider=()=>{if(activeTiles)shipmentMapInstance.removeLayer(activeTiles);tileProviderIndex++;if(tileProviderIndex>=tileProviders.length){const note=document.createElement("div");note.className="shipment-map-error";note.textContent="Map imagery is temporarily unreachable. Check your connection and tap Refresh.";host.appendChild(note);return;}let errors=0;activeTiles=tileProviders[tileProviderIndex]();activeTiles.on("tileerror",()=>{errors++;if(errors>=3)useNextTileProvider();});activeTiles.addTo(shipmentMapInstance);};useNextTileProvider();
-const line=L.polyline(points,{color:x.transport_mode==="road"?"#f28b24":"#e9a817",weight:x.transport_mode==="road"?7:4,opacity:.96,dashArray:x.transport_mode==="air"?"10 9":null,lineCap:"round",lineJoin:"round"}).addTo(shipmentMapInstance);
-const travelled=L.polyline([],{color:"#168eea",weight:5,opacity:1,lineCap:"round"}).addTo(shipmentMapInstance);
-L.marker(from).addTo(shipmentMapInstance).bindPopup("START · "+originLabel);
-L.marker(to).addTo(shipmentMapInstance).bindPopup("DESTINATION · "+destinationLabel);
-let countryBounds=null;
-const sameCountry=x.origin_country&&x.destination_country&&x.origin_country===x.destination_country;
-if(sameCountry){
-try{
-const country=await shipmentGeocodeResult(x.origin_country);
-if(country.boundingbox){const b=country.boundingbox.map(Number);countryBounds=L.latLngBounds([b[0],b[2]],[b[1],b[3]]);}
-}catch{}
-}
-if(countryBounds){
-shipmentMapInstance.fitBounds(countryBounds,{padding:[28,28]});
-const cityNames=shipmentPlaces[x.origin_country]||[];
-for(const city of cityNames){
-try{
-const pos=await shipmentGeocode(city+", "+x.origin_country);
-const isEnd=city.toLowerCase()===(x.destination_city||"").toLowerCase();
-const isStart=city.toLowerCase()===(x.origin_city||"").toLowerCase();
-L.circleMarker(pos,{radius:isStart||isEnd?6:4,color:isStart?"#168eea":isEnd?"#18a66a":"#526b80",weight:2,fillColor:"#fff",fillOpacity:1}).addTo(shipmentMapInstance).bindTooltip(city,{direction:"top",offset:[0,-5]});
-}catch{}
-}
-}else{
-shipmentMapInstance.fitBounds(line.getBounds().pad(.16));
-}
-const icon=L.divIcon({className:"shipment-live-vehicle",html:x.transport_mode==="air"?'<span class="shipment-aircraft-icon" aria-label="Aeroplane in flight"><svg viewBox="0 0 64 64" width="48" height="48" xmlns="http://www.w3.org/2000/svg"><path d="M30 4c2-3 5-3 7 0l5 22 17 12c2 2 1 5-2 5l-17-5-3 17 7 5v4l-12-3-12 3v-4l7-5-3-17-17 5c-3 0-4-3-2-5l17-12z" fill="#fff" stroke="#17243a" stroke-width="2" stroke-linejoin="round"/></svg></span>':'<span>'+(x.transport_mode==="sea"?"🚢":"🚚")+'</span>',iconSize:[52,52],iconAnchor:[26,26]});
-const marker=L.marker(Number.isFinite(Number(x.current_lat))&&x.current_lat!==null&&Number.isFinite(Number(x.current_lng))&&x.current_lng!==null?[Number(x.current_lat),Number(x.current_lng)]:from,{icon,zIndexOffset:1000}).addTo(shipmentMapInstance);
-const events=(data.events||[]).slice().sort((a,b)=>new Date(b.event_at)-new Date(a.event_at));
-const stop=events.find(e=>["stop","blockage","delay"].includes(e.event_type));let stopPoint=null;
-if(stop){
-const match=(stop.event_details||"").match(/(?:Stop location|Location):\s*([^\n]+)/i);
-const location=x.current_location||match?.[1];
-if(location){try{stopPoint=await shipmentGeocode(location+", "+(x.origin_country||""));L.circleMarker(stopPoint,{radius:10,color:"#e34b36",fillColor:"#ff784f",fillOpacity:1,weight:3}).addTo(shipmentMapInstance).bindPopup("<b>"+(stop.event_type==="blockage"?"ROAD BLOCKAGE": "VEHICLE STOPPED")+"</b><br>"+location+"<br>"+(stop.event_details||""));}catch{}}
-}
-const update=()=>{
-if(Number.isFinite(Number(x.current_lat))&&x.current_lat!==null&&Number.isFinite(Number(x.current_lng))&&x.current_lng!==null){
-const pos=[Number(x.current_lat),Number(x.current_lng)];marker.setLatLng(pos);
-let nearest=0,best=Infinity;points.forEach((p,i)=>{const d=(p[0]-pos[0])**2+(p[1]-pos[1])**2;if(d<best){best=d;nearest=i;}});
-travelled.setLatLngs(points.slice(0,nearest+1).concat([pos]));return;
-}
-const now=Date.now(),depart=new Date(x.departure_at).getTime(),arrive=new Date(x.arrival_at).getTime();
-let p=now<depart?0:now>=arrive?1:Math.max(0,Math.min(1,(now-depart)/(arrive-depart)));
-const resumed=events.some(e=>e.event_type==="resume"&&new Date(e.event_at)>new Date(stop?.event_at||0));
-if(stop&&!resumed){p=Math.max(0,Math.min(1,(new Date(stop.event_at).getTime()-depart)/(arrive-depart)));if(stopPoint)marker.setLatLng(stopPoint);else marker.setLatLng(shipmentPointAt(points,p));}
-else marker.setLatLng(shipmentPointAt(points,p));
-const idx=Math.max(1,Math.floor(p*(points.length-1)));travelled.setLatLngs(points.slice(0,idx+1));
-};
-update();shipmentMapTimer=setInterval(update,1000);
-if(routeDistance){const detail=document.querySelector(".shipment-route-distance");if(detail)detail.textContent=(routeDistance/1000).toFixed(0)+" km route";}
-setTimeout(()=>shipmentMapInstance?.invalidateSize(),300);
-}catch(error){host.innerHTML='<div class="shipment-map-error">The country map or direct route could not load. Check the selected country and city. <small>'+esc(error.message||"Map service unavailable")+'</small></div>';}
+ const host=document.getElementById("shipment-live-map");if(!host)return;const x=data.shipment;
+ const signature=[x.id,x.origin,x.destination,x.origin_airport_code,x.destination_airport_code,x.departure_at,x.arrival_at,x.is_obstructed,x.paused_progress].join("::");
+ if(shipmentMapSignature===signature&&shipmentMapInstance){shipmentMapInstance.invalidateSize();return;}
+ if(shipmentMapTimer)clearInterval(shipmentMapTimer);if(shipmentMapInstance){shipmentMapInstance.remove();shipmentMapInstance=null;}shipmentMapSignature=signature;
+ host.innerHTML='<div class="shipment-map-loading">Preparing the locally calculated route…</div>';
+ try{
+  await loadShipmentMapLibrary();
+  const from=shipmentCoordinates(x,"origin"),to=shipmentCoordinates(x,"destination");
+  if(!from||!to)throw new Error("This location is not in the local reference directory yet. Add airport codes or choose a supported city.");
+  const L=window.L,mode=x.transport_mode||"road";
+  const points=Array.isArray(x.route_points)&&x.route_points.length>1?x.route_points:buildShipmentRoute(from,to,mode,120);
+  const metrics=routeMetrics(points,mode);
+  shipmentMapInstance=L.map(host,{scrollWheelZoom:true,zoomControl:true,preferCanvas:true}).setView(from,5);
+  const tileProviders=[
+   ()=>L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors",crossOrigin:true,keepBuffer:4}),
+   ()=>L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri",crossOrigin:true,keepBuffer:4}),
+   ()=>L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,attribution:"© OpenStreetMap contributors © CARTO",crossOrigin:true,keepBuffer:4})
+  ];
+  let tileIndex=-1,activeTiles=null;
+  const nextTiles=()=>{if(activeTiles)shipmentMapInstance.removeLayer(activeTiles);tileIndex++;if(tileIndex>=tileProviders.length)return;let errors=0;activeTiles=tileProviders[tileIndex]();activeTiles.on("tileerror",()=>{if(++errors>=3)nextTiles();});activeTiles.addTo(shipmentMapInstance);};
+  nextTiles();
+  const planned=L.polyline(points,{color:mode==="road"?"#f28b24":"#e9a817",weight:5,opacity:.94,dashArray:mode==="air"?"10 9":mode==="sea"?"3 8":null,lineCap:"round",lineJoin:"round"}).addTo(shipmentMapInstance);
+  const travelled=L.polyline([],{color:"#168eea",weight:5,opacity:1,lineCap:"round"}).addTo(shipmentMapInstance);
+  L.circleMarker(from,{radius:7,color:"#168eea",weight:3,fillColor:"#fff",fillOpacity:1}).addTo(shipmentMapInstance).bindTooltip("Origin");
+  L.circleMarker(to,{radius:7,color:"#18a66a",weight:3,fillColor:"#fff",fillOpacity:1}).addTo(shipmentMapInstance).bindTooltip("Destination");
+  (Array.isArray(x.checkpoint_plan)?x.checkpoint_plan:[]).forEach(cp=>{if(Array.isArray(cp.position)&&cp.position.length===2)L.circleMarker(cp.position,{radius:4,color:"#f0a72d",weight:2,fillColor:"#fff",fillOpacity:1}).addTo(shipmentMapInstance).bindTooltip(cp.title||"Route checkpoint");});
+  const events=(data.events||[]).slice().sort((a,b)=>new Date(a.event_at)-new Date(b.event_at));
+  const stop=[...events].reverse().find(e=>["stop","blockage","delay"].includes(e.event_type));
+  const resumed=stop&&events.some(e=>e.event_type==="resume"&&new Date(e.event_at)>new Date(stop.event_at));
+  const glyph=mode==="air"?"✈":mode==="sea"?"🚢":"🚚";
+  const icon=L.divIcon({className:"shipment-live-vehicle",html:'<span aria-label="Simulated shipment vehicle">'+glyph+'</span>',iconSize:[48,48],iconAnchor:[24,24]});
+  const marker=L.marker(from,{icon,zIndexOffset:1000}).addTo(shipmentMapInstance);
+  const update=()=>{
+   let progress=shipmentProgressAt(x,Date.now());
+   if(stop&&!resumed&&!x.is_obstructed)progress=shipmentProgressAt({...x,is_obstructed:false,status:"in_transit"},new Date(stop.event_at).getTime());
+   let pos=positionOnRoute(points,progress);
+   if(Number.isFinite(Number(x.current_lat))&&x.current_lat!==null&&Number.isFinite(Number(x.current_lng))&&x.current_lng!==null)pos=[Number(x.current_lat),Number(x.current_lng)];
+   if(pos)marker.setLatLng(pos);
+   const travelledPoints=points.slice(0,Math.max(2,Math.floor(progress*(points.length-1))+1));if(pos)travelledPoints.push(pos);travelled.setLatLngs(travelledPoints);
+  };
+  update();shipmentMapTimer=setInterval(update,1000);shipmentMapInstance.fitBounds(planned.getBounds().pad(.18));
+  const distance=document.querySelector(".shipment-route-distance");if(distance)distance.textContent=(x.route_distance_km||metrics.distanceKm)+" km · local route estimate";
+  setTimeout(()=>shipmentMapInstance?.invalidateSize(),300);
+ }catch(error){host.innerHTML='<div class="shipment-map-error">The local route could not be plotted. <small>'+esc(error.message||"Route unavailable")+'</small></div>';}
 }
 function renderPublicShipment(){document.title="Private shipment tracking";const slug=new URLSearchParams(location.search).get("shipment")||"";if(publicShipmentData){if(!shipmentRefreshTimer&&publicShipmentPassword){shipmentRefreshTimer=setInterval(async()=>{try{const response=await fetch(SUPABASE_URL+"/functions/v1/shipment-public",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY},body:JSON.stringify({action:"view",slug,password:publicShipmentPassword})});const data=await response.json();if(data.ok){publicShipmentData=data;const activeInput=document.activeElement?.closest("#shipment-viewer-message")?document.activeElement:null;const draft=activeInput?.value||"";const y=window.scrollY;const liveMapNode=app.querySelector("#shipment-live-map");app.innerHTML=renderPublicShipmentView(data);const nextMapHost=app.querySelector("#shipment-live-map");if(liveMapNode&&nextMapHost)nextMapHost.replaceWith(liveMapNode);initPublicShipmentMap(data);if(activeInput){const input=app.querySelector("#shipment-viewer-message input");if(input){input.value=draft;input.focus();}}window.scrollTo(0,y);}}catch{}} ,30000);}return renderPublicShipmentView(publicShipmentData);}return '<main class="public-shipment"><div class="public-shipment-brand"><b>Secure shipment tracking</b></div><section class="public-shipment-gate"><div class="shipment-intro-icon">📦</div><h1>View your shipment</h1><p>Enter the private tracking password shared by the sender.</p>'+(publicShipmentError?'<div class="notice">'+esc(publicShipmentError)+'</div>':'')+'<form id="shipment-access-form"><input type="hidden" name="slug" value="'+esc(slug)+'"><label>Tracking password<input name="password" type="password" autocomplete="current-password" required placeholder="Enter tracking password"></label><button class="primary-btn" type="submit">Open tracking page →</button></form><small>Private shipment journey page · independently operated preview</small></section></main>';}
 function renderPublicShipmentView(data){
