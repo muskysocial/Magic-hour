@@ -24,7 +24,7 @@ Deno.serve(async(req:Request)=>{
     return json({ok:true});
    }
    const sub=body.subscription;if(!sub||!endpoint.startsWith("https://")||!sub.keys?.p256dh||!sub.keys?.auth)return json({ok:false,error:"Browser push subscription is invalid."},400);
-   const {error}=await admin.from("ms_shipment_push_subscriptions").upsert({shipment_id:shipmentId,endpoint,subscription:sub,user_agent:String(req.headers.get("user-agent")||"").slice(0,500),is_active:true,last_seen_at:new Date().toISOString(),disabled_at:null},{onConflict:"endpoint"});
+   const {error}=await admin.from("ms_shipment_push_subscriptions").upsert({shipment_id:shipmentId,endpoint,subscription:sub,user_agent:String(req.headers.get("user-agent")||"").slice(0,500),is_active:true,last_seen_at:new Date().toISOString(),disabled_at:null},{onConflict:"shipment_id,endpoint"});
    if(error)throw error;return json({ok:true});
   }
   if(action!=="dispatch")return json({ok:false,error:"Unsupported action."},400);
@@ -40,7 +40,7 @@ Deno.serve(async(req:Request)=>{
   for(const n of rows||[]){
    const {data:s}=await admin.from("ms_shipments").select("tracking_slug,tracking_code,carrier,status,public_status_label,is_obstructed").eq("id",n.shipment_id).maybeSingle();
    if(!s)continue;
-   if(n.expires_at&&new Date(n.expires_at)<=now){expired++;continue;}
+   if(n.expires_at&&new Date(n.expires_at)<=now){expired++;await admin.from("ms_shipment_notifications").update({push_sent_at:now.toISOString(),updated_at:now.toISOString()}).eq("id",n.id).is("push_sent_at",null);continue;}
    if(!due(n,s,now))continue;
    const {data:subs}=await admin.from("ms_shipment_push_subscriptions").select("id,endpoint,subscription").eq("shipment_id",n.shipment_id).eq("is_active",true);
    const title=String(s.carrier||n.bot_name||"Shipment Service");
