@@ -552,3 +552,5 @@ body{font-size:14px}
 
 .admin-user-search{width:100%;max-width:420px;margin:0 0 12px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--text);font:inherit;outline:none}
 .admin-user-search:focus{border-color:var(--blue)}
+
+.shipment-fields .shipment-aircraft-field[hidden]{display:none!important}
