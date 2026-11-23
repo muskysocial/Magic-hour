@@ -28,11 +28,13 @@ Deno.serve(async(req:Request)=>{
    if(error)throw error;return json({ok:true});
   }
   if(action!=="dispatch")return json({ok:false,error:"Unsupported action."},400);
-  const cronSecret=Deno.env.get("PUSH_CRON_SECRET")||"";
+  const {data:config,error:configError}=await admin.rpc("get_shipment_push_config");
+  if(configError)throw configError;
+  const cronSecret=String(config?.shipment_push_cron_secret||"");
   if(!cronSecret||req.headers.get("x-push-cron-secret")!==cronSecret)return json({ok:false,error:"Unauthorized."},401);
-  const publicKey=Deno.env.get("VAPID_PUBLIC_KEY")||"",privateKey=Deno.env.get("VAPID_PRIVATE_KEY")||"";
+  const publicKey=String(config?.shipment_vapid_public_key||""),privateKey=String(config?.shipment_vapid_private_key||"");
   if(!publicKey||!privateKey)return json({ok:false,error:"Web Push keys are not configured."},503);
-  webpush.setVapidDetails(Deno.env.get("VAPID_SUBJECT")||"mailto:support@magichour-black.vercel.app",publicKey,privateKey);
+  webpush.setVapidDetails(String(config?.shipment_vapid_subject||"mailto:support@magichour-black.vercel.app"),publicKey,privateKey);
   const now=new Date();
   const {data:rows,error}=await admin.from("ms_shipment_notifications").select("id,shipment_id,bot_name,message,trigger_type,trigger_status,scheduled_at,expires_at,is_active,published_at,push_sent_at").eq("is_active",true).is("push_sent_at",null).limit(100);
   if(error)throw error;
