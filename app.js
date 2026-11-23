@@ -654,7 +654,7 @@ async function initPublicShipmentMap(data){
   (Array.isArray(x.checkpoint_plan)?x.checkpoint_plan:[]).forEach(cp=>{if(Array.isArray(cp.position)&&cp.position.length===2)L.circleMarker(cp.position,{radius:4,color:"#f0a72d",weight:2,fillColor:"#fff",fillOpacity:1}).addTo(shipmentMapInstance).bindTooltip(cp.title||"Route checkpoint");});
   const events=(data.events||[]).slice().sort((a,b)=>new Date(a.event_at)-new Date(b.event_at));
   const stop=[...events].reverse().find(e=>["stop","blockage","delay"].includes(e.event_type));
-  const resumed=stop&&events.some(e=>e.event_type==="resume"&&new Date(e.event_at)>new Date(stop.event_at));
+  const resumed=stop&&events.some(e=>["resume","clear_blockage"].includes(e.event_type)&&new Date(e.event_at)>new Date(stop.event_at));
   const glyph=mode==="air"?"✈":mode==="sea"?"🚢":"🚚";
   const icon=L.divIcon({className:"shipment-live-vehicle",html:'<span aria-label="Simulated shipment vehicle">'+glyph+'</span>',iconSize:[48,48],iconAnchor:[24,24]});
   const marker=L.marker(from,{icon,zIndexOffset:1000}).addTo(shipmentMapInstance);
