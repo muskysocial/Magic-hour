@@ -56,5 +56,5 @@ Deno.serve(async(req:Request)=>{
    if(!anySent&&!(subs||[]).length)continue;
   }
   return json({ok:true,checked:rows?.length||0,sent,failed,expired});
- }catch(e){return json({ok:false,error:e instanceof Error?e.message:"Push request failed."},500);}
+ }catch(e){console.error("shipment-push dispatch error",e);const detail=e instanceof Error?e.message:String((e as any)?.message||JSON.stringify(e)||"Push request failed.");return json({ok:false,error:detail},500);}
 });
