@@ -269,7 +269,7 @@ function renderShipmentOwnerControls(){if(!shipmentCreated?.id)return "";const r
 async function loadShipmentOwnerMessages(){if(!shipmentCreated?.id)return;const {data,error}=await supabase.from("ms_shipment_messages").select("id,sender_role,sender_name,message,created_at").eq("shipment_id",shipmentCreated.id).order("created_at",{ascending:true}).limit(100);if(!error)shipmentOwnerMessages=data||[];}
 function renderShipmentRoom(){
  const carriers=CARRIERS;
- const carrierOptions=carriers.map(x=>'<option value="'+x+'">'+x+'</option>').join("");
+ const carrierOptions=carriers.map(x=>'<option value="'+x+'">'+x+'</option>').join("")+'<option value="Custom service">Custom service</option>';
  const shipmentList=userShipments.map(x=>'<button class="account-panel shipment-history-row" data-shipment-open="'+x.id+'"><b>'+esc(x.tracking_code)+' · '+esc(x.carrier)+'</b><p>'+esc(x.origin)+' → '+esc(x.destination)+' · '+esc(x.status)+'</p><small>'+new Date(x.created_at).toLocaleDateString()+'</small></button>').join("");
  return '<div class="section-head"><div><h1 class="page-title">Shipment Journey</h1><p class="page-sub">Create a private shipment page with an animated route preview and scheduled journey.</p></div><button class="back-btn" data-action="back">← Back</button></div>'+
  '<div class="shipment-intro"><div class="shipment-intro-icon">✈</div><div><b>Your shipment, beautifully presented</b><p>Choose a carrier, add your items, set the journey schedule and share a private tracking page. This is a privately operated scheduled journey preview, not the carrier\'s official tracking system.</p></div></div>'+
