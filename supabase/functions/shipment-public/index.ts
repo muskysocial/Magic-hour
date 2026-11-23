@@ -26,8 +26,26 @@ Deno.serve(async(req:Request)=>{
    admin.from("ms_shipment_media").select("storage_path,file_name,mime_type,media_kind").eq("shipment_id",s.id).order("created_at",{ascending:true}),
    admin.from("ms_shipment_messages").select("id,sender_role,sender_name,message,created_at").eq("shipment_id",s.id).order("created_at",{ascending:true}).limit(100)
   ]);
+  const now=new Date();
+  const {data:botRows}=await admin.from("ms_shipment_notifications")
+    .select("id,bot_key,bot_name,message,trigger_type,trigger_status,scheduled_at,expires_at,published_at,created_at")
+    .eq("shipment_id",s.id).eq("is_active",true).order("created_at",{ascending:true});
+  const dueBots=(botRows||[]).filter((n:any)=>{
+    if(n.expires_at && new Date(n.expires_at)<=now)return false;
+    if(n.published_at)return true;
+    if(n.trigger_type==="manual")return true;
+    if(n.trigger_type==="scheduled")return !!n.scheduled_at && new Date(n.scheduled_at)<=now;
+    const expected=String(n.trigger_status||"").trim().toLowerCase();
+    const actual=[s.status,s.public_status_label,s.is_obstructed?"stopped":""].map((v:any)=>String(v||"").trim().toLowerCase());
+    return !!expected && actual.includes(expected);
+  });
+  const newlyPublished=dueBots.filter((n:any)=>!n.published_at).map((n:any)=>n.id);
+  if(newlyPublished.length){
+    await admin.from("ms_shipment_notifications").update({published_at:now.toISOString(),updated_at:now.toISOString()}).in("id",newlyPublished);
+  }
+  const notifications=dueBots.map((n:any)=>({...n,published_at:n.published_at||now.toISOString(),sender_label:s.carrier||n.bot_name||"Shipment Service"}));
   const clean={...s};delete clean.access_password_hash;delete clean.tracking_slug;
   const linked=await Promise.all((media||[]).map(async m=>{const {data}=await admin.storage.from("magic-hour-assets").createSignedUrl(m.storage_path,3600);return {file_name:m.file_name,mime_type:m.mime_type,media_kind:m.media_kind,url:data?.signedUrl||null};}));
-  return json({ok:true,shipment:clean,events:events||[],media:linked,messages:messages||[]});
+  return json({ok:true,shipment:clean,events:events||[],media:linked,messages:messages||[],notifications});
  }catch(e){return json({ok:false,error:e instanceof Error?e.message:"Request failed."},500);}
 });
