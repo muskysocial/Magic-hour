@@ -1,5 +1,5 @@
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./api.js";
-import { AIRPORTS, AIRCRAFT_MODELS, CARRIERS, AIRLINES, resolveShipmentPlace, buildShipmentRoute, routeMetrics, shipmentProgressAt, positionOnRoute, createCheckpointPlan } from "./tracking-engine.js";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./api.js?v=20261123-startup2";
+import { AIRPORTS, AIRCRAFT_MODELS, CARRIERS, AIRLINES, resolveShipmentPlace, buildShipmentRoute, routeMetrics, shipmentProgressAt, positionOnRoute, createCheckpointPlan } from "./tracking-engine.js?v=20261123-startup2";
 
 const app = document.querySelector("#app");
 const tools = [
