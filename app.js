@@ -996,6 +996,25 @@ if(b.dataset.action==="prepare"){
  return;
 }});
 app.addEventListener("input",e=>{
+ const form=e.target.closest("#shipment-waybill-form");
+ if(form){
+  const draft=Object.fromEntries(new FormData(form).entries());
+  if(currentUser&&shipmentCreated?.id){try{localStorage.setItem("mh-waybill:"+currentUser.id+":"+shipmentCreated.id,JSON.stringify(draft));}catch{}}
+  const placeFields=["waybill_origin_node","waybill_destination_node","waybill_origin_port","waybill_destination_port","waybill_origin_airport","waybill_destination_airport","waybill_origin_depot","waybill_destination_depot"];
+  if(placeFields.includes(e.target.name)){
+   clearTimeout(e.target._placeLookupTimer);const query=e.target.value.trim();
+   if(query.length>=3)e.target._placeLookupTimer=setTimeout(async()=>{
+    try{
+     const response=await fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&limit=6");
+     if(!response.ok)return;const payload=await response.json();const features=payload.features||[];
+     const listId="place-suggestions-"+e.target.name;let list=form.querySelector("#"+listId);
+     if(!list){list=document.createElement("datalist");list.id=listId;form.appendChild(list);e.target.setAttribute("list",listId);}
+     list.replaceChildren(...features.map(feature=>{const props=feature.properties||{};const place=[props.name,props.city,props.state,props.country].filter(Boolean).join(", ");const option=document.createElement("option");option.value=place;return option;}));
+    }catch(error){/* Online suggestions are optional; manual entry always remains available. */}
+   },850);
+  }
+  return;
+ }
  if(e.target.id!=="admin-user-search")return;
  const query=String(e.target.value||"").trim().toLowerCase();
  const table=app.querySelector(".admin-room-main .admin-table-wrap tbody");
