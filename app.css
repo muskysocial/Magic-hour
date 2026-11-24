@@ -641,3 +641,70 @@ html[data-user-theme="dark"] .icon-btn,html[data-user-theme="dark"] .shipment-ro
 html[data-user-theme="dark"] .side-link,html[data-user-theme="dark"] .bottom-nav button{color:#b4c2d4!important}html[data-user-theme="dark"] .side-link.active,html[data-user-theme="dark"] .side-link:hover{background:#243650!important;color:#fff!important}html[data-user-theme="dark"] .brand small,html[data-user-theme="dark"] .side-label,html[data-user-theme="dark"] .page-sub,html[data-user-theme="dark"] .section-head p,html[data-user-theme="dark"] .side-bottom p,html[data-user-theme="dark"] .project-row p,html[data-user-theme="dark"] .asset-row p,html[data-user-theme="dark"] .tool-card p,html[data-user-theme="dark"] .shipment-intro p,html[data-user-theme="dark"] .appearance-preference p{color:#a7b6c9!important}
 html[data-user-theme="dark"] .bottom-nav{background:#141e2d!important;border-color:#304158!important}html[data-user-theme="dark"] .hero{background:linear-gradient(110deg,#182a40,#172235)!important;border-color:#304158!important;color:#edf3fb!important}html[data-user-theme="dark"] .hero h1,html[data-user-theme="dark"] .hero p{color:#edf3fb!important}html[data-user-theme="dark"] .pro-banner{background:linear-gradient(110deg,#302b20,#1d2633)!important;border-color:#594b2c!important;color:#f8edce!important}html[data-user-theme="dark"] .wallet{background:#302a1d!important;color:#f6e6bd!important;border-color:#594b2c!important}
 @media(max-width:560px){.appearance-choice-grid{grid-template-columns:1fr}.appearance-choice{padding:11px}}
+
+
+/* Final theme harmonization: component-level contrast, including Shipment Journey */
+html[data-user-theme="light"] .shipment-room-welcome{background:linear-gradient(135deg,#eaf4ff,#f8fbff)!important;border-color:#d4e2f1!important;color:#172337!important}
+html[data-user-theme="light"] .shipment-room-welcome h2,
+html[data-user-theme="light"] .shipment-room-welcome p{color:#172337!important}
+html[data-user-theme="light"] .shipment-room-menu-card{background:#fff!important;border-color:#d6e1ed!important;color:#172337!important;box-shadow:0 5px 18px rgba(25,55,85,.06)}
+html[data-user-theme="light"] .shipment-room-menu-card>span,
+html[data-user-theme="light"] .shipment-room-menu-card>b{color:#172337!important}
+html[data-user-theme="light"] .shipment-room-menu-card>small{color:#607187!important}
+html[data-user-theme="light"] .shipment-room-section,
+html[data-user-theme="light"] .shipment-config-section{background:#fff!important;border-color:#d6e1ed!important;color:#172337!important}
+html[data-user-theme="light"] .shipment-room-section>summary,
+html[data-user-theme="light"] .shipment-config-section>summary{background:#f7faff!important;color:#172337!important}
+html[data-user-theme="light"] .shipment-room-section>summary small{color:#607187!important}
+html[data-user-theme="light"] .shipment-room-back{background:#edf4fc!important;color:#1d4f80!important;border-color:#d2dfed!important}
+html[data-user-theme="light"] .shipment-created,
+html[data-user-theme="light"] .shipment-owner-controls,
+html[data-user-theme="light"] .shipment-history{background:#fff!important;color:#172337!important}
+html[data-user-theme="light"] .shipment-room-home h1,
+html[data-user-theme="light"] .shipment-room-home h2,
+html[data-user-theme="light"] .shipment-room-home h3,
+html[data-user-theme="light"] .shipment-room-home p{color:#172337!important}
+html[data-user-theme="light"] .shipment-room-home small{color:#607187!important}
+
+html[data-user-theme="dark"] .shipment-room-welcome{background:linear-gradient(135deg,#172b40,#111d2c)!important;border-color:#30465e!important;color:#edf3fb!important}
+html[data-user-theme="dark"] .shipment-room-welcome h2,
+html[data-user-theme="dark"] .shipment-room-home h1,
+html[data-user-theme="dark"] .shipment-room-home h2,
+html[data-user-theme="dark"] .shipment-room-home h3,
+html[data-user-theme="dark"] .shipment-room-home p{color:#edf3fb!important}
+html[data-user-theme="dark"] .shipment-room-welcome p,
+html[data-user-theme="dark"] .shipment-room-menu-card>small,
+html[data-user-theme="dark"] .shipment-room-section>summary small,
+html[data-user-theme="dark"] .shipment-room-home small{color:#afbed0!important}
+html[data-user-theme="dark"] .shipment-room-menu-card{background:#172538!important;border-color:#354b63!important;color:#edf3fb!important;box-shadow:0 5px 18px rgba(0,0,0,.15)}
+html[data-user-theme="dark"] .shipment-room-menu-card>span,
+html[data-user-theme="dark"] .shipment-room-menu-card>b{color:#edf3fb!important}
+html[data-user-theme="dark"] .shipment-room-section,
+html[data-user-theme="dark"] .shipment-config-section,
+html[data-user-theme="dark"] .shipment-created,
+html[data-user-theme="dark"] .shipment-owner-controls,
+html[data-user-theme="dark"] .shipment-history{background:#141f2e!important;border-color:#35495f!important;color:#edf3fb!important}
+html[data-user-theme="dark"] .shipment-room-section>summary,
+html[data-user-theme="dark"] .shipment-config-section>summary{background:#1a2a3d!important;color:#edf3fb!important}
+html[data-user-theme="dark"] .shipment-room-back{background:#20354b!important;color:#e7f1fc!important;border-color:#405873!important}
+html[data-user-theme="dark"] .shipment-room-home [style*="color:"],
+html[data-user-theme="dark"] .shipment-room-home .muted{color:#afbed0!important}
+
+/* Keep theme contrast predictable for common text and form controls */
+html[data-user-theme="light"] .content,
+html[data-user-theme="light"] .content h1,
+html[data-user-theme="light"] .content h2,
+html[data-user-theme="light"] .content h3,
+html[data-user-theme="light"] .content p,
+html[data-user-theme="light"] .content label{color:#172337}
+html[data-user-theme="dark"] .content,
+html[data-user-theme="dark"] .content h1,
+html[data-user-theme="dark"] .content h2,
+html[data-user-theme="dark"] .content h3,
+html[data-user-theme="dark"] .content p,
+html[data-user-theme="dark"] .content label{color:#edf3fb}
+html[data-user-theme="dark"] input,
+html[data-user-theme="dark"] select,
+html[data-user-theme="dark"] textarea{background:#1b293b!important;color:#edf3fb!important;border-color:#40536c!important}
+html[data-user-theme="dark"] input::placeholder,
+html[data-user-theme="dark"] textarea::placeholder{color:#a7b6c9!important;opacity:1}
