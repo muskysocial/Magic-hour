@@ -584,3 +584,31 @@ body{font-size:14px}
 .shipment-room-back{display:inline-flex;align-items:center;gap:8px;margin:14px 15px 0;padding:10px 14px;border:1px solid #38556d;border-radius:10px;background:#12283b;color:#dff4ff;font-weight:750;cursor:pointer}
 .shipment-room-panel>summary{margin-top:10px}
 @media(max-width:560px){.shipment-room-menu{grid-template-columns:1fr}.shipment-room-menu-card{min-height:116px;padding:16px}}
+
+
+/* Magic Hour light interface refresh — site-wide light appearance */
+:root{color-scheme:light;--bg:#f4f7fb;--panel:#ffffff;--panel2:#f7f9fc;--line:#dce4ee;--muted:#64748b;--text:#172337;--blue:#1769c2;--cyan:#1685b8}
+html,body{background:#f4f7fb!important;color:#172337!important}
+.shell{background:#f4f7fb!important;color:#172337!important}
+.topbar{background:rgba(255,255,255,.94)!important;border-bottom:1px solid #dce4ee!important;color:#172337!important;box-shadow:0 2px 12px #17324d0a}
+.icon-btn{background:#fff!important;border-color:#dce4ee!important;color:#24364c!important}
+.brand small,.side-label,.page-sub,.section-head p{color:#64748b!important}
+.sidebar{background:#fff!important;border-right:1px solid #e1e7ef!important}
+.side-link{color:#526176!important}.side-link.active,.side-link:hover{background:#eaf2fc!important;color:#155ca7!important;box-shadow:inset 3px 0 #2475c5!important}
+.side-bottom,.account-panel,.project-row,.asset-row,.workspace,.empty-panel,.shipment-room-section,.shipment-room-home,.shipment-intro,.shipment-config-section{background:#fff!important;border-color:#dce4ee!important;color:#172337!important}
+.side-bottom p,.project-row p,.asset-row p,.shipment-intro p{color:#64748b!important}
+.content{color:#172337!important}
+.tool-card,.mini-tool,.history-item,.admin-room-card{background:#fff!important;border-color:#dce4ee!important;color:#172337!important;box-shadow:0 5px 18px #17324d0a}
+.tool-card p,.mini-tool b,.history-item small{color:#64748b!important}
+.chatbar,.video-prompt,.video-options select,.recent-image-select,.shipment-fields input,.shipment-fields select,.shipment-fields textarea,.auth-form input{background:#fff!important;color:#172337!important;border-color:#d3deea!important}
+.shipment-room-menu-card,.shipment-room-back,.secondary-btn{background:#f1f6fc!important;color:#1c4f82!important;border-color:#d5e1ef!important}
+.shipment-room-welcome,.shipment-created,.shipment-chat-log{background:#f7faff!important;color:#172337!important;border-color:#dce4ee!important}
+.shipment-room-welcome p,.shipment-created p{color:#64748b!important}
+.auth-card,.auth-screen{background:#f4f7fb!important;color:#172337!important}
+.auth-form label{color:#34445a!important}
+.pro-banner{background:linear-gradient(110deg,#fff8e6,#fff)!important;border-color:#f1dfb2!important;color:#33280f!important}
+.wallet{background:#fff8e8!important;color:#523c0b!important;border-color:#f0dfb7!important}
+.bottom-nav{background:rgba(255,255,255,.97)!important;border-top:1px solid #dce4ee!important}
+.bottom-nav button{color:#64748b!important}
+.hero{background:linear-gradient(110deg,#e8f3ff,#f9fbff 65%,#e9f4ff)!important;border-color:#cfe1f5!important;color:#172337!important}
+.hero h1,.hero p{color:#172337!important}.eyebrow{color:#45627f!important}
