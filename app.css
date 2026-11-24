@@ -567,3 +567,20 @@ body{font-size:14px}
 
 /* Shipment room control-centre navigation */
 .shipment-room-section{border:1px solid #24384b;border-radius:16px;background:#0a131e;overflow:hidden;margin:0 0 14px}.shipment-room-section>summary{list-style:none;cursor:pointer;padding:17px 19px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#eaf5ff;font-weight:800}.shipment-room-section>summary::-webkit-details-marker{display:none}.shipment-room-section>summary:after{content:'＋';color:#74d1ed;font-size:18px}.shipment-room-section[open]>summary:after{content:'−'}.shipment-room-section[open]>summary{background:#102235;border-bottom:1px solid #263e52}.shipment-room-section>summary small{color:#8da8bd;font-weight:600}.shipment-room-section>.shipment-history,.shipment-room-section>.shipment-created,.shipment-room-section>.shipment-owner-controls{margin:15px}.shipment-room-actions{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0 18px}.shipment-room-actions button{flex:1 1 175px;min-height:44px}.shipment-ticket-form{padding:16px}.shipment-config-section{border:1px solid #24384b;border-radius:12px;margin:10px 0;overflow:hidden}.shipment-config-section>summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:750}.shipment-config-section>summary::-webkit-details-marker{display:none}.shipment-config-section>summary:after{content:'＋';float:right;color:#7bd5ef}.shipment-config-section[open]>summary:after{content:'−'}
+
+
+/* Shipment Room navigation hub */
+.shipment-room-home{margin:18px 0 24px}
+.shipment-room-welcome{padding:22px;border:1px solid #29445b;border-radius:20px;background:linear-gradient(135deg,#10263a,#111827 72%);margin-bottom:16px}
+.shipment-room-welcome h2{font-size:clamp(22px,4vw,30px);margin:8px 0;color:#f3f8ff}
+.shipment-room-welcome p{color:#a8bfd2;margin:0;line-height:1.55}
+.shipment-room-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.shipment-room-menu-card{min-width:0;text-align:left;display:flex;flex-direction:column;gap:8px;padding:19px;border:1px solid #29445b;border-radius:17px;background:#0c1825;color:#eaf5ff;cursor:pointer;min-height:142px;transition:border-color .18s,transform .18s,background .18s}
+.shipment-room-menu-card:hover{border-color:#63c8e8;background:#102337;transform:translateY(-2px)}
+.shipment-room-menu-card>span{font-size:25px}
+.shipment-room-menu-card>b{font-size:15px}
+.shipment-room-menu-card>small{color:#91aabd;line-height:1.45}
+.shipment-room-panel[hidden],.shipment-room-home[hidden]{display:none!important}
+.shipment-room-back{display:inline-flex;align-items:center;gap:8px;margin:14px 15px 0;padding:10px 14px;border:1px solid #38556d;border-radius:10px;background:#12283b;color:#dff4ff;font-weight:750;cursor:pointer}
+.shipment-room-panel>summary{margin-top:10px}
+@media(max-width:560px){.shipment-room-menu{grid-template-columns:1fr}.shipment-room-menu-card{min-height:116px;padding:16px}}
