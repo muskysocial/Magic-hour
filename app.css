@@ -612,3 +612,22 @@ html,body{background:#f4f7fb!important;color:#172337!important}
 .bottom-nav button{color:#64748b!important}
 .hero{background:linear-gradient(110deg,#e8f3ff,#f9fbff 65%,#e9f4ff)!important;border-color:#cfe1f5!important;color:#172337!important}
 .hero h1,.hero p{color:#172337!important}.eyebrow{color:#45627f!important}
+
+/* High-contrast light theme repairs */
+:root{color-scheme:light!important}
+body,#app,.shell,.layout,.content{background:#f4f7fb!important;color:#172337!important}
+h1,h2,h3,h4,p,span,small,label,strong,b,legend,.page-title,.section-head h2,.shipment-room-panel,.shipment-room-panel p{color:inherit}
+.shipment-fields label,.shipment-ticket-form label,.waybill-form label{display:flex;flex-direction:column;gap:8px;color:#26384d!important;font-weight:700!important;font-size:14px!important;line-height:1.4!important;margin:0 0 13px}
+.shipment-fields label small,.shipment-ticket-form label small,.waybill-form label small{color:#53657a!important}
+.shipment-fields input,.shipment-fields select,.shipment-fields textarea,.shipment-ticket-form input,.shipment-ticket-form select,.shipment-ticket-form textarea,.waybill-form input,.waybill-form select,.waybill-form textarea{background:#fff!important;color:#172337!important;border:1px solid #b9c7d7!important;border-radius:12px!important;min-height:48px;padding:12px 14px!important;opacity:1!important}
+.shipment-fields input::placeholder,.shipment-fields textarea::placeholder,.waybill-form input::placeholder{color:#718096!important;opacity:1!important}
+.waybill-intro{display:flex;flex-direction:column;gap:7px;background:#edf4fb!important;border:1px solid #d2dfed;border-radius:14px;padding:15px;margin-bottom:16px;color:#172337!important}
+.waybill-intro b,.waybill-intro span{color:#26384d!important;opacity:1!important}
+.shipment-room-panel>h2,.shipment-room-panel>p{color:#172337!important}
+.shipment-room-panel .page-sub,.shipment-room-panel small{color:#52647a!important}
+.shipment-room-section>summary{color:#172337!important;background:#fff!important}
+.shipment-room-section>summary small{color:#53657a!important}
+.shipment-room-menu-card{background:#fff!important;color:#172337!important;border-color:#d4dfeb!important}
+.shipment-room-menu-card>b,.shipment-room-menu-card>small{color:#25384e!important}
+input:disabled,select:disabled{color:#64748b!important;opacity:1!important}
+@media(max-width:600px){.waybill-form label{font-size:14px!important}}
