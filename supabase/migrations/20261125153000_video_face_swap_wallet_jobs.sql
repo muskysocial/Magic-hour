@@ -25,5 +25,5 @@ drop policy if exists "Users can view their own video face swap jobs" on public.
 create policy "Users can view their own video face swap jobs"
   on public.mh_video_face_swap_jobs for select to authenticated
   using ((select auth.uid()) = user_id);
-revoke all on public.mh_video_face_swap_jobs from anon, authenticated;
+revoke all on public.mh_video_face_swap_jobs from public, anon, authenticated;
 grant select on public.mh_video_face_swap_jobs to authenticated;
