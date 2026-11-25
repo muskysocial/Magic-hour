@@ -343,6 +343,13 @@ body{font-size:14px}
 .route-moving{animation:shipment-route-drift 16s ease-in-out infinite alternate}
 @keyframes shipment-route-drift{from{offset-distance:var(--p)}to{offset-distance:var(--next)}}
 .shipment-owner-controls{margin-top:16px;display:grid;gap:14px}.shipment-owner-controls h2{font:800 18px Manrope;margin:0}.shipment-owner-controls h3{font:800 14px Manrope;margin:8px 0 0}
+.shipment-movement-controls,.shipment-owner-push{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 15px;border:1px solid var(--line,#2a4055);border-radius:13px;background:var(--panel,#101d2a)}
+.shipment-movement-controls>div,.shipment-owner-push>div{display:grid;gap:4px;min-width:0}
+.shipment-movement-controls b,.shipment-owner-push b{font-size:13px;color:var(--text,#eaf4ff)}
+.shipment-movement-controls small,.shipment-owner-push small{font-size:11px;line-height:1.45;color:var(--muted,#9fb1c3)}
+.shipment-movement-controls button,.shipment-owner-push button{flex:none}
+@media(max-width:520px){.shipment-movement-controls,.shipment-owner-push{align-items:flex-start;flex-direction:column}.shipment-movement-controls button,.shipment-owner-push button{width:100%}}
+
 .shipment-owner-controls .shipment-fields{margin-top:2px}.shipment-owner-controls .shipment-fields label{display:grid}
 .shipment-chat-log{display:grid;gap:9px;max-height:260px;overflow:auto;padding:10px;border:1px solid #26384b;border-radius:13px;background:#08111a}
 .shipment-chat-message{max-width:88%;padding:10px 12px;border:1px solid #2a4055;border-radius:12px;background:#101d2a}
