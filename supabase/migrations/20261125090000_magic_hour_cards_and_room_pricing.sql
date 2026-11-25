@@ -100,7 +100,7 @@ returns jsonb language plpgsql security definer set search_path=public,auth as $
 declare v_user uuid:=auth.uid(); v_tx public.mh_wallet_transactions%rowtype; v_balance bigint;
 begin
  if v_user is null then raise exception 'Sign in required.'; end if;
- select * into v_tx from public.mh_wallet_transactions where user_id=v_user and reference=left('mhrefund-source:'||p_reference,140) limit 1;
+ select * into v_tx from public.mh_wallet_transactions where user_id=v_user and reference=left(p_reference,120) limit 1;
  if not found then raise exception 'Original charge was not found.'; end if;
  if exists(select 1 from public.mh_wallet_transactions where user_id=v_user and reference=left('mhrefund:'||p_reference,140)) then
   select balance into v_balance from public.mh_wallets where user_id=v_user;
