@@ -18,6 +18,8 @@ create table if not exists public.mh_magic_hour_cards (
 );
 create index if not exists mh_magic_hour_cards_status_created_idx on public.mh_magic_hour_cards(status,created_at desc);
 alter table public.mh_magic_hour_cards enable row level security;
+revoke all on public.mh_magic_hour_cards from anon, authenticated;
+grant select on public.mh_magic_hour_cards to authenticated;
 drop policy if exists "Users can view their redeemed Magic Hour cards" on public.mh_magic_hour_cards;
 create policy "Users can view their redeemed Magic Hour cards" on public.mh_magic_hour_cards for select to authenticated using (redeemed_by = auth.uid());
 create table if not exists public.mh_room_pricing (
@@ -30,6 +32,8 @@ create table if not exists public.mh_room_pricing (
 insert into public.mh_room_pricing(room_key,standard_coin_rate,premium_coin_rate,billing_unit_seconds)
 values ('live-tracking',1200,800,1800),('headswap',400,400,1),('video-face-swap',300,300,10)
 on conflict(room_key) do update set standard_coin_rate=excluded.standard_coin_rate,premium_coin_rate=excluded.premium_coin_rate,billing_unit_seconds=excluded.billing_unit_seconds,updated_at=now();
+alter table public.mh_room_pricing enable row level security;
+revoke all on public.mh_room_pricing from anon, authenticated;
 
 create or replace function public.mh_redeem_magic_hour_card(p_code text)
 returns jsonb language plpgsql security definer set search_path=public,auth as $$
@@ -42,13 +46,13 @@ declare
 begin
  if v_user is null then raise exception 'Sign in to redeem your card.'; end if;
  if length(trim(coalesce(p_code,''))) < 6 or length(trim(p_code)) > 80 then raise exception 'Enter a valid card code.'; end if;
- v_hash := encode(digest(upper(regexp_replace(trim(p_code),'[^A-Za-z0-9]','','g')),'sha256'),'hex');
+ v_hash := encode(extensions.digest(upper(regexp_replace(trim(p_code),'[^A-Za-z0-9]','','g')),'sha256'),'hex');
  select * into v_card from public.mh_magic_hour_cards where promo_code_hash=v_hash for update;
  if not found then raise exception 'Card code not found.'; end if;
  if v_card.status <> 'active' then raise exception 'This card has already been used or is no longer active.'; end if;
  if v_card.expires_at is not null and v_card.expires_at <= v_now then
    update public.mh_magic_hour_cards set status='expired' where id=v_card.id;
-   raise exception 'This card has expired.';
+   return jsonb_build_object('ok',false,'error','This card has expired.');
  end if;
  if v_card.coin_reward > 0 then
    insert into public.mh_wallets(user_id,balance) values(v_user,0) on conflict(user_id) do nothing;
