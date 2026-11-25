@@ -29,3 +29,5 @@ jobs:
           deno-version: v2.x
       - name: Type-check Supabase Edge Functions
         run: deno check supabase/functions/admin-console/index.ts supabase/functions/campaign-service/index.ts supabase/functions/shipment-public/index.ts supabase/functions/magic-hour-cards/index.ts supabase/functions/video-face-swap/index.ts
+      - name: Test MP4 validation and billing inputs
+        run: deno test supabase/functions/video-face-swap/mp4_test.ts
