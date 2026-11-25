@@ -77,6 +77,7 @@ Deno.serve(async(req:Request)=>{
   if(action==="notify_owner"){
    const slug=String(body.slug||"").replace(/[^a-f0-9]/gi,"").slice(0,64),password=String(body.password||"");
    const shipment=await validAccess(slug,password);if(!shipment)return json({ok:false,error:"Tracking credentials are invalid."},403);
+   const messageId=String(body.message_id||"");const {data:messageRow}=await admin.from("ms_shipment_messages").select("id").eq("id",messageId).eq("shipment_id",shipment.id).eq("sender_role","viewer").maybeSingle();if(!messageRow)return json({ok:false,error:"A valid recipient message is required before notifying the owner."},403);
    await pushConfig();
    const result=await sendToShipment(shipment,"owner",String(shipment.carrier||"Shipment service"),String(body.message||"A recipient sent a new shipment message."));
    return json({ok:true,...result});
