@@ -26,4 +26,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check Supabase Edge Functions
-        run: deno check supabase/functions/admin-console/index.ts supabase/functions/campaign-service/index.ts supabase/functions/shipment-public/index.ts
+        run: deno check supabase/functions/admin-console/index.ts supabase/functions/campaign-service/index.ts supabase/functions/shipment-public/index.ts supabase/functions/magic-hour-cards/index.ts supabase/functions/video-face-swap/index.ts
