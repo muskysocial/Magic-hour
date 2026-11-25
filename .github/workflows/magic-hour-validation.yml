@@ -18,6 +18,8 @@ jobs:
         run: node --input-type=module --check < app.js
       - name: Check API client JavaScript syntax
         run: node --input-type=module --check < api.js
+      - name: Validate homepage WebP asset
+        run: node -e "const fs=require('fs');const s=fs.readFileSync('assets/homepage-flight-attendant.webp.b64','utf8').trim();const b=Buffer.from(s,'base64');if(b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP'||b.readUInt32LE(4)!==b.length-8)throw new Error('Homepage hero WebP asset is invalid');"
       - name: Check local shipment engine JavaScript syntax
         run: node --input-type=module --check < tracking-engine.js
       - name: Test local shipment route and movement engine
@@ -26,4 +28,6 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check Supabase Edge Functions
-        run: deno check supabase/functions/admin-console/index.ts supabase/functions/campaign-service/index.ts supabase/functions/shipment-public/index.ts
+        run: deno check supabase/functions/admin-console/index.ts supabase/functions/campaign-service/index.ts supabase/functions/shipment-public/index.ts supabase/functions/magic-hour-cards/index.ts supabase/functions/video-face-swap/index.ts
+      - name: Test MP4 validation and billing inputs
+        run: deno test supabase/functions/video-face-swap/mp4_test.ts

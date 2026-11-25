@@ -17,14 +17,25 @@ Deno.serve(async(req:Request)=>{
   if(!password||password.length>100||!(await verify(s,password)))return json({ok:false,error:"The tracking password is incorrect."},403);
   if(action==="message"){
    const message=String(body.message||"").trim().slice(0,1000);
-   if(!message)return json({ok:false,error:"Write a message first."},400);
-   const {error:me}=await admin.from("ms_shipment_messages").insert({shipment_id:s.id,sender_role:"viewer",sender_name:s.recipient_name,message});
-   if(me)return json({ok:false,error:"Message could not be sent."},500);
+   const imageData=String(body.image_base64||"");
+   if(!message&&!imageData)return json({ok:false,error:"Write a message or attach an image."},400);
+   let attachment_path:string|null=null,attachment_name:string|null=null,attachment_mime:string|null=null;
+   if(imageData){
+    const match=imageData.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if(!match)return json({ok:false,error:"Attach a JPG, PNG or WebP image."},400);
+    const raw=atob(match[2]);if(raw.length>5*1024*1024)return json({ok:false,error:"Images must be 5 MB or smaller."},413);
+    const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));attachment_mime=match[1];const ext=attachment_mime==="image/jpeg"?"jpg":attachment_mime.split("/")[1];attachment_name=String(body.image_name||("message-image."+ext)).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,100);
+    attachment_path=s.id+"/recipient-chat/"+crypto.randomUUID()+"."+ext;
+    const {error:uploadError}=await admin.storage.from("magic-hour-assets").upload(attachment_path,bytes,{contentType:attachment_mime,upsert:false});
+    if(uploadError)return json({ok:false,error:"Image could not be uploaded."},500);
+   }
+   const {error:me}=await admin.from("ms_shipment_messages").insert({shipment_id:s.id,sender_role:"viewer",sender_name:s.recipient_name,message:message||"Image attachment",attachment_path,attachment_name,attachment_mime});
+   if(me){if(attachment_path)await admin.storage.from("magic-hour-assets").remove([attachment_path]);return json({ok:false,error:"Message could not be sent."},500);}
   }else if(action!=="view")return json({ok:false,error:"Unsupported action."},400);
   const [{data:events},{data:media},{data:messages}]=await Promise.all([
    admin.from("ms_shipment_events").select("id,event_title,event_details,event_at,event_type").eq("shipment_id",s.id).order("event_at",{ascending:true}),
    admin.from("ms_shipment_media").select("storage_path,file_name,mime_type,media_kind").eq("shipment_id",s.id).order("created_at",{ascending:true}),
-   admin.from("ms_shipment_messages").select("id,sender_role,sender_name,message,created_at").eq("shipment_id",s.id).order("created_at",{ascending:true}).limit(100)
+   admin.from("ms_shipment_messages").select("id,sender_role,sender_name,message,created_at,attachment_path,attachment_name,attachment_mime").eq("shipment_id",s.id).order("created_at",{ascending:true}).limit(100)
   ]);
   const now=new Date();
   const {data:botRows}=await admin.from("ms_shipment_notifications")
@@ -44,8 +55,9 @@ Deno.serve(async(req:Request)=>{
     await admin.from("ms_shipment_notifications").update({published_at:now.toISOString(),updated_at:now.toISOString()}).in("id",newlyPublished);
   }
   const notifications=dueBots.map((n:any)=>({...n,published_at:n.published_at||now.toISOString(),sender_label:s.carrier||n.bot_name||"Shipment Service"}));
+  const linkedMessages=await Promise.all((messages||[]).map(async (m:any)=>{let attachment_url=null;if(m.attachment_path){const {data:signed}=await admin.storage.from("magic-hour-assets").createSignedUrl(m.attachment_path,3600);attachment_url=signed?.signedUrl||null;}return {id:m.id,sender_role:m.sender_role,sender_name:m.sender_name,message:m.message,created_at:m.created_at,attachment_name:m.attachment_name,attachment_url};}));
   const clean={...s};delete clean.access_password_hash;delete clean.tracking_slug;
   const linked=await Promise.all((media||[]).map(async m=>{const {data}=await admin.storage.from("magic-hour-assets").createSignedUrl(m.storage_path,3600);return {file_name:m.file_name,mime_type:m.mime_type,media_kind:m.media_kind,url:data?.signedUrl||null};}));
-  return json({ok:true,shipment:clean,events:events||[],media:linked,messages:messages||[],notifications});
+  return json({ok:true,shipment:clean,events:events||[],media:linked,messages:linkedMessages,notifications});
  }catch(e){return json({ok:false,error:e instanceof Error?e.message:"Request failed."},500);}
 });
