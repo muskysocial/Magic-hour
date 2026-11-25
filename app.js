@@ -16,6 +16,7 @@ const moreTools = [
 let savedTheme="light";try{savedTheme=localStorage.getItem("mh-appearance")||"light";}catch{}if(!["light","dark"].includes(savedTheme))savedTheme="light";
 function applyUserTheme(theme){savedTheme=theme==="dark"?"dark":"light";document.documentElement.dataset.userTheme=savedTheme;document.documentElement.style.colorScheme=savedTheme;try{localStorage.setItem("mh-appearance",savedTheme);}catch{}}
 applyUserTheme(savedTheme);
+let homepageHeroImageData="";
 let page = "Home";
 let activeTool = null;
 let messages = [];
@@ -204,13 +205,23 @@ function applyPublicAppearance(){
  const social=String(publicSiteConfig.settings?.social_image_url||"");
  if(/^https:\/\//i.test(social))document.querySelectorAll('meta[property="og:image"],meta[name="twitter:image"]').forEach(meta=>meta.content=social);
 }
+async function loadHomepageHeroAsset(){
+ try{
+  const response=await fetch(new URL("./assets/homepage-flight-attendant.webp.b64",import.meta.url),{cache:"force-cache"});
+  if(!response.ok)throw new Error("Homepage image asset is unavailable.");
+  const encoded=(await response.text()).trim();
+  if(!/^[A-Za-z0-9+/=]+$/.test(encoded))throw new Error("Homepage image asset is invalid.");
+  homepageHeroImageData="data:image/webp;base64,"+encoded;
+  if(page==="Home")render();
+ }catch(error){console.warn("Homepage hero image:",error?.message||error);}
+}
 function renderMaintenance(){return '<section class="empty-panel"><div class="empty-icon">'+iconSvg("settings",34)+'</div><h1 class="page-title">Magic Hour is being updated</h1><p class="page-sub">We’ll be back shortly. Thank you for your patience.</p></section>';}
 function renderHome(){if(publicSiteConfig.settings?.maintenance_mode&&!isAdmin)return '<section class="empty-panel"><div class="empty-icon">'+iconSvg("settings",34)+'</div><h1 class="page-title">Magic Hour is being updated</h1><p class="page-sub">We’ll be back shortly. Thank you for your patience.</p></section>';return `${publicSiteConfig.settings?.announcement?`<div class="site-announcement-banner">${esc(publicSiteConfig.settings.announcement)}</div>`:""}
 ${renderCampaignPublicPlacements()}
 ${renderPublicAnnouncements()}
 <section class="hero">
   <div><div class="eyebrow">YOUR CREATIVE SPACE, ALL IN ONE PLACE</div><h1>${esc(publicSiteConfig.settings?.homepage_headline||"What shall we create today?")}</h1><p>Design, transform and create with AI — all in one studio.</p></div>
-  <div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="orb"></div><span class="spark one">${iconSvg("sparkles",21)}</span><span class="spark two">${iconSvg("sparkles",16)}</span></div>
+  <div class="hero-art">${homepageHeroImageData?`<img class="hero-banner-photo" src="${homepageHeroImageData}" alt="Flight attendant looking out toward an approaching passenger aircraft">`:`<div class="orbit"></div><div class="orb"></div><span class="spark one">${iconSvg("sparkles",21)}</span><span class="spark two">${iconSvg("sparkles",16)}</span>`}</div>
 </section>
 <form class="chatbar" id="chat-form"><span aria-hidden="true">${iconSvg("sparkles",18)}</span><input id="chat-input" placeholder="Ask magic hour anything..." aria-label="Ask magic hour anything"><button class="send" aria-label="Send message">${iconSvg("send",18)}</button></form>
 <section><div class="section-head"><div><h2>${iconSvg("sparkles",15)} &nbsp;Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ${iconSvg("arrow",13)}</button></div><div class="tools-grid">${tools.filter(t=>publicSiteConfig.features?.find(f=>f.tool_id===t.id)?.enabled!==false).map(toolCard).join("")}</div></section>
@@ -1219,6 +1230,7 @@ function renderCampaignPublicPlacements(){
 }
 
 render();
+loadHomepageHeroAsset();
 loadPublicSiteConfig();
 loadPublicCampaigns();
 initializeAppAuth();
