@@ -102,50 +102,73 @@ let welcomeCampaignShown = (()=>{try{return sessionStorage.getItem("mh_welcome_c
 
 // Do not block module startup on Supabase session recovery. The old top-level
 // await left the HTML boot screen visible indefinitely when auth was slow/offline.
+function renderAuthStartup(message="Restoring your secure session…"){
+  app.innerHTML='<div class="boot" role="status" aria-live="polite"><span class="boot-mark">m</span><span>magic hour</span><small>'+esc(message)+'</small></div>';
+}
 async function initializeAppAuth(){
   app.dataset.backend = "configured";
   app.dataset.auth = "checking";
-  supabase.auth.onAuthStateChange((_event, session) => {
-    currentUser = session?.user || null;
-    if (currentUser) {
+  renderAuthStartup();
+  let initialSessionHandled=false;
+  supabase.auth.onAuthStateChange((event, session) => {
+    if(session?.user){
+      currentUser=session.user;
+      sessionState="signed-in";
+      app.dataset.auth=sessionState;
       restoreWorkspaceState();
       render();
       loadAccountData().then(()=>verifyReturnedPayment()).catch(error=>console.warn("Account startup:",error));
       refreshAdminAccess().then(()=>{sendVisitorHeartbeat();render();});
-    } else {
+      return;
+    }
+    // Only a confirmed initial empty session or an explicit sign-out may show login.
+    if(event==="INITIAL_SESSION"||event==="SIGNED_OUT"){
+      initialSessionHandled=true;
+      currentUser=null;
       isAdmin=false;
       adminDashboardData=null;
+      sessionState="signed-out";
+      app.dataset.auth=sessionState;
       sendVisitorHeartbeat();
-      sessionState = "signed-out";
-      app.dataset.auth = sessionState;
       render();
     }
   });
-  try {
-    const timeout = new Promise(resolve=>setTimeout(()=>resolve({timedOut:true}),8000));
-    const result = await Promise.race([supabase.auth.getSession(),timeout]);
+  try{
+    const timeout=new Promise(resolve=>setTimeout(()=>resolve({timedOut:true}),15000));
+    const result=await Promise.race([supabase.auth.getSession(),timeout]);
     if(result?.timedOut){
-      sessionState = "unknown";
-      app.dataset.auth = sessionState;
-      console.warn("Supabase session check timed out; showing sign-in instead of blocking startup.");
-      render();
-    } else {
-      const {data,error} = result;
-      sessionState = error ? "unknown" : (data.session ? "signed-in" : "signed-out");
-      currentUser = data.session?.user || null;
-      app.dataset.auth = sessionState;
-      if(currentUser){
+      if(!currentUser&&!initialSessionHandled){
+        sessionState="unknown";
+        app.dataset.auth=sessionState;
+        renderAuthStartup("Still securely checking your saved login…");
+        console.warn("Session restoration is taking longer than expected; keeping the login screen hidden.");
+      }
+    }else{
+      const {data,error}=result;
+      if(data?.session?.user){
+        currentUser=data.session.user;
+        sessionState="signed-in";
+        app.dataset.auth=sessionState;
         restoreWorkspaceState();
         render();
         loadAccountData().then(()=>verifyReturnedPayment()).catch(error=>console.warn("Account startup:",error));
+      }else if(!error){
+        currentUser=null;
+        sessionState="signed-out";
+        app.dataset.auth=sessionState;
+        render();
+      }else{
+        sessionState="unknown";
+        app.dataset.auth=sessionState;
+        renderAuthStartup("Your saved session could not be checked. Please retry your connection.");
+        console.warn("Auth session check:",error.message);
       }
-      if(error) console.warn("Auth session check:",error.message);
     }
-  } catch(error) {
-    sessionState = "offline";
-    app.dataset.auth = sessionState;
+  }catch(error){
+    sessionState="offline";
+    app.dataset.auth=sessionState;
+    renderAuthStartup("Connection interrupted while restoring your session. Reconnect and reload.");
     console.warn("Supabase session unavailable:",error);
-    render();
   }
   refreshAdminAccess().then(()=>{sendVisitorHeartbeat();render();});
   setInterval(sendVisitorHeartbeat,60000);
@@ -647,7 +670,7 @@ function renderAdminCampaigns(){
 function renderAdminDashboard(){
  if(!isAdmin)return renderAdminOverview();
  const nav=ADMIN_ROOMS.map(r=>'<button type="button" class="admin-room-link '+(activeAdminRoom===r.name?'active':'')+'" data-admin-room="'+esc(r.name)+'"><span>'+iconSvg(r.icon,18)+'</span><b>'+esc(r.name)+'</b><small>'+esc(r.desc)+'</small></button>').join("");
- const content=activeAdminRoom==="Overview"?renderAdminOverview():activeAdminRoom==="Site Uploads"?renderAdminUploads():activeAdminRoom==="Campaigns"?renderAdminCampaigns():renderConnectedAdminRoom(activeAdminRoom);
+ const content=activeAdminRoom==="Overview"?renderAdminOverview():activeAdminRoom==="Site Uploads"?renderAdminUploads():activeAdminRoom==="Campaigns"?renderAdminCampaigns():activeAdminRoom==="Magic Hour Cards"?renderAdminRoomPanel(activeAdminRoom):renderConnectedAdminRoom(activeAdminRoom);
  return '<section class="admin-control-centre"><header class="admin-control-head"><div><div class="eyebrow">MAGIC HOUR / PRIVATE ADMINISTRATION</div><h1>Site Control Centre</h1><p>One secure room for managing, monitoring and improving your entire website.</p></div><span class="admin-owner-chip">'+iconSvg("shield-check",15)+' Owner access</span></header><nav class="admin-room-grid" aria-label="Site Control Centre rooms">'+nav+'</nav><div class="admin-room-main">'+content+'</div></section>';
 }
 
@@ -788,7 +811,7 @@ ${phoneMode?(authMode==="phone-verify"?`<label>Verification code<input name="otp
 ${phoneMode?`<button class="text-btn auth-switch" data-auth-mode="login">Back to email sign in</button>`:`<button class="text-btn auth-switch" data-auth-mode="${authMode==="login"?"signup":"login"}">${authMode==="login"?"New to magic hour? Create an account":"Already have an account? Sign in"}</button>`}
 ${authMode==="login"?`<button class="text-btn auth-reset" data-auth-reset>Forgot password?</button>`:""}<p class="auth-message" role="status">${esc(authNotice)}</p><p class="auth-legal">By continuing, you agree to use magic hour responsibly.</p></div></div>`;const googleButton=app.querySelector("[data-auth-google]");if(googleButton){googleButton.addEventListener("click",async event=>{event.preventDefault();event.stopPropagation();googleButton.disabled=true;googleButton.textContent="Connecting to Google…";authNotice="";try{const {data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:"https://magichour-black.vercel.app",skipBrowserRedirect:true}});if(error)throw error;if(!data?.url)throw new Error("No Google authorization URL was returned. Confirm Google is enabled in Supabase Auth → Providers.");window.location.href=data.url;}catch(error){authNotice="Google sign-in failed: "+(error?.message||String(error));renderAuth();}});}}
 
-function render(){if(new URLSearchParams(location.search).has("shipment")){app.innerHTML=renderPublicShipment();if(publicShipmentData)initPublicShipmentMap(publicShipmentData);return;}if(!currentUser){renderAuth();return;}if(!workspaceStateRestored)restoreWorkspaceState();const body=publicSiteConfig.settings?.maintenance_mode&&!isAdmin?renderMaintenance():activeTool?renderTool():page==="Home"?renderHome():page==="New chat"?renderChat():(page==="Admin dashboard"||page==="Site Control Centre")?renderAdminDashboard():renderGeneric();app.innerHTML=`
+function render(){if(new URLSearchParams(location.search).has("shipment")){app.innerHTML=renderPublicShipment();if(publicShipmentData)initPublicShipmentMap(publicShipmentData);return;}if(!currentUser){if(sessionState==="checking"||sessionState==="unknown"||sessionState==="offline"){renderAuthStartup(sessionState==="checking"?"Restoring your secure session…":"Waiting to reconnect to your saved session…");return;}renderAuth();return;}if(!workspaceStateRestored)restoreWorkspaceState();const body=publicSiteConfig.settings?.maintenance_mode&&!isAdmin?renderMaintenance():activeTool?renderTool():page==="Home"?renderHome():page==="New chat"?renderChat():(page==="Admin dashboard"||page==="Site Control Centre")?renderAdminDashboard():renderGeneric();app.innerHTML=`
 <div class="shell">
 <header class="topbar"><button class="icon-btn" data-action="menu" aria-label="Toggle menu">${iconSvg("menu",19)}</button><div class="brand">${renderBrandMarkup()}</div><div class="top-spacer"></div><button class="install-app" id="install-app" hidden>Install app</button><button class="wallet" data-modal="wallet" aria-label="Coin wallet, ${walletBalance} coins${dailyClaimAvailable?", daily gift available":""}"><span class="coin">${iconSvg("coin",17)}</span><strong>${walletBalance.toLocaleString()}</strong>${dailyClaimAvailable?`<span class="daily-gift-indicator" title="Daily coins ready to claim">${iconSvg("gift",15)}</span>`:""}<span class="add-coin">+</span></button><button class="icon-btn notif" data-page="Notifications" aria-label="Notifications">${iconSvg("bell",18)}</button><button class="icon-btn account-btn" data-action="account" aria-label="Account">${iconSvg("user",19)}</button></header>
 <div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","home")}${sidebarLink("New chat","chat")}${sidebarLink("Library","library")}${sidebarLink("Projects","grid")}${sidebarLink("All tools","sparkles")}<div class="side-label">Account</div>${sidebarLink("Settings","settings")}${isAdmin?sidebarLink("Site Control Centre","shield-check"):""}<div class="side-bottom"><b>${iconSvg("crown",15)} &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
