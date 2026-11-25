@@ -221,6 +221,26 @@ function recentThumbs(kind,selectedId=""){
  if(!images.length)return '<p class="recent-empty">Your recently used images will appear here.</p>';
  return `<div class="recent-strip" aria-label="Recently used images">${images.map(asset=>`<div class="recent-thumb-wrap"><button type="button" class="recent-thumb ${asset.id===selectedId?"selected":""}" data-recent-${kind}="${esc(asset.id)}" aria-label="Use ${esc(asset.file_name||"recent image")}" aria-pressed="${asset.id===selectedId}"><img src="${esc(asset.signedUrl)}" alt="${esc(asset.file_name||"Recent image")}" loading="lazy">${asset.id===selectedId?'<span class="recent-check">✓</span>':""}</button><button type="button" class="recent-dismiss" data-dismiss-recent="${esc(asset.id)}" aria-label="Hide from recent images">×</button></div>`).join("")}</div>`;
 }
+async function pollVideoFaceSwap(jobId,token,attempt){
+ if(token!==videoFaceSwapPollingToken||!jobId)return;
+ if(attempt>90){workspaceBusy=false;workspaceNotice="Your video is still processing. Reopen Video Face Swap and contact support with job ID "+jobId+" if it does not finish.";render();return;}
+ try{
+  const {data,error}=await supabase.functions.invoke("video-face-swap",{body:{action:"status",jobId}});
+  if(error)throw error;
+  if(data?.status==="completed"&&data.videoUrl){
+   workspaceResultUrl=data.videoUrl;activeVideoFaceSwapJobId=null;workspaceBusy=false;workspaceNotice="Video face swap completed and saved to your private Library.";await loadAccountData();render();return;
+  }
+  if(data?.status==="failed"||data?.ok===false){
+   activeVideoFaceSwapJobId=null;workspaceBusy=false;workspaceNotice=(data?.error||"Video face swap failed.")+(data?.creditsRefunded?" Your coins have been returned.":" Please contact support to verify the wallet adjustment.");await loadAccountData();render();return;
+  }
+  workspaceBusy=true;workspaceNotice=data?.note||"PiAPI is processing your video face swap…";render();
+  setTimeout(()=>pollVideoFaceSwap(jobId,token,attempt+1),8000);
+ }catch(error){
+  workspaceNotice="Checking video face-swap status… "+(error?.message||"");render();
+  setTimeout(()=>pollVideoFaceSwap(jobId,token,attempt+1),12000);
+ }
+}
+
 async function pollPiapiVideo(jobId,token,attempt){
  if(token!==videoPollingToken||!jobId)return;
  if(attempt>90){workspaceNotice="Your video is taking longer than expected. You can return to AI Video and check again later.";workspaceBusy=false;render();return;}
@@ -901,6 +921,48 @@ if(b.dataset.asset){const a=userAssets.find(x=>x.id===b.dataset.asset);if(a){sup
   workspaceNotice="Video submitted. PiAPI is generating it now…";workspaceBusy=false;await loadAccountData();render();
   pollPiapiVideo(data.jobId,videoPollingToken,0);
  }catch(error){workspaceNotice="Video request failed: "+(error?.message||String(error));workspaceBusy=false;await loadAccountData();render();}
+ return;
+}
+if(b.dataset.action==="run-video-face-swap"){
+ if(!currentUser){workspaceNotice="Please sign in to generate a video face swap.";render();return;}
+ if(!videoFaceSwapImageFile||!videoFaceSwapVideoFile||!videoFaceSwapDurationSeconds){workspaceNotice="Choose a face image and a readable MP4 video first.";render();return;}
+ if(videoFaceSwapVideoFile.size>10*1024*1024){workspaceNotice="The MP4 must be 10 MB or smaller.";render();return;}
+ if(!["image/jpeg","image/png","image/webp"].includes(videoFaceSwapImageFile.type)||videoFaceSwapVideoFile.type!=="video/mp4"&&!videoFaceSwapVideoFile.name.toLowerCase().endsWith(".mp4")){workspaceNotice="Use a JPG, PNG or WebP face image and an MP4 video.";render();return;}
+ workspaceBusy=true;workspaceResultUrl="";workspaceNotice="Creating your private project and uploading both files…";render();
+ let projectId=null,uploaded=[];
+ try{
+  const {data:project,error:projectError}=await supabase.from("mh_projects").insert({user_id:currentUser.id,title:"Video Face Swap "+new Date().toLocaleString(),tool_id:"videoswap",status:"processing",metadata:{provider:"PiAPI Qubico/video-toolkit",billing:"300 coins per 10 seconds"}}).select("id").single();
+  if(projectError)throw projectError;
+  projectId=project.id;currentProjectId=projectId;
+  const uploadAsset=async(file,role)=>{
+   const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+   const storagePath=currentUser.id+"/"+projectId+"/"+Date.now()+"-"+role+"-"+safeName;
+   const {error:uploadError}=await supabase.storage.from("magic-hour-assets").upload(storagePath,file,{contentType:file.type|| (role==="target-video"?"video/mp4":"image/jpeg"),upsert:false});
+   if(uploadError)throw uploadError;
+   uploaded.push(storagePath);
+   const {error:assetError}=await supabase.from("mh_assets").insert({user_id:currentUser.id,project_id:projectId,storage_path:storagePath,file_name:file.name,mime_type:file.type|| (role==="target-video"?"video/mp4":"image/jpeg"),size_bytes:file.size});
+   if(assetError)throw assetError;
+   return storagePath;
+  };
+  const sourceImagePath=await uploadAsset(videoFaceSwapImageFile,"swap-face");
+  const targetVideoPath=await uploadAsset(videoFaceSwapVideoFile,"target-video");
+  workspaceNotice="Files saved. Checking the exact duration and charging your wallet…";render();
+  const {data,error}=await supabase.functions.invoke("video-face-swap",{body:{action:"start",sourceImagePath,targetVideoPath,projectId}});
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||"PiAPI could not start the video face swap.");
+  walletBalance=Number(data.balance??walletBalance);
+  activeVideoFaceSwapJobId=data.jobId;videoFaceSwapPollingToken++;
+  videoFaceSwapImageFile=null;videoFaceSwapVideoFile=null;videoFaceSwapDurationSeconds=0;
+  if(videoFaceSwapImagePreviewUrl)URL.revokeObjectURL(videoFaceSwapImagePreviewUrl);
+  if(videoFaceSwapVideoPreviewUrl)URL.revokeObjectURL(videoFaceSwapVideoPreviewUrl);
+  videoFaceSwapImagePreviewUrl="";videoFaceSwapVideoPreviewUrl="";
+  workspaceBusy=true;workspaceNotice="Your video face swap is submitted. "+Number(data.coinCost||0).toLocaleString()+" coins charged.";await loadAccountData();render();
+  pollVideoFaceSwap(data.jobId,videoFaceSwapPollingToken,0);
+ }catch(error){
+  workspaceBusy=false;workspaceNotice="Video face swap could not start: "+(error?.message||String(error));
+  if(projectId&&!activeVideoFaceSwapJobId){await supabase.from("mh_projects").update({status:"failed",updated_at:new Date().toISOString()}).eq("id",projectId).eq("user_id",currentUser.id);}
+  await loadAccountData();render();
+ }
  return;
 }
 if(b.dataset.action==="check-piapi-access"){
