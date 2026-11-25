@@ -31,6 +31,15 @@ Deno.serve(async(req:Request)=>{
    }
    const {error:me}=await admin.from("ms_shipment_messages").insert({shipment_id:s.id,sender_role:"viewer",sender_name:s.recipient_name,message:message||"Image attachment",attachment_path,attachment_name,attachment_mime});
    if(me){if(attachment_path)await admin.storage.from("magic-hour-assets").remove([attachment_path]);return json({ok:false,error:"Message could not be sent."},500);}
+   // The tracking visitor's message belongs to the carrier assigned to this shipment.
+   // Notify the Magic Hour shipment owner without exposing the owner's account details.
+   try{
+    await fetch(Deno.env.get("SUPABASE_URL")!+"/functions/v1/shipment-push",{
+     method:"POST",
+     headers:{"Content-Type":"application/json","apikey":Deno.env.get("SUPABASE_ANON_KEY")||""},
+     body:JSON.stringify({action:"notify_owner",slug,password,message:message||"The recipient attached an image to the shipment conversation."})
+    });
+   }catch(pushError){console.warn("Shipment owner push notification failed:",pushError);}
   }else if(action!=="view")return json({ok:false,error:"Unsupported action."},400);
   const [{data:events},{data:media},{data:messages}]=await Promise.all([
    admin.from("ms_shipment_events").select("id,event_title,event_details,event_at,event_type").eq("shipment_id",s.id).order("event_at",{ascending:true}),
