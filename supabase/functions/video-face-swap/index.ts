@@ -160,6 +160,8 @@ Deno.serve(async (req: Request) => {
         await admin.from("mh_video_face_swap_jobs").update({ status: "failed", error_message: "Insufficient coins or wallet charge failed." }).eq("id", jobId);
         return reply({ ok: false, error: debitError?.message || "You do not have enough coins for this video. " + coinCost + " coins are required.", requiredCoins: coinCost }, 402);
       }
+      const chargedCoins = Number(debitRow.cost ?? coinCost);
+      await admin.from("mh_video_face_swap_jobs").update({ coin_cost: chargedCoins }).eq("id", jobId);
 
       const [imageSigned, videoSigned] = await Promise.all([
         admin.storage.from("magic-hour-assets").createSignedUrl(sourceImagePath, 86400),
@@ -185,23 +187,23 @@ Deno.serve(async (req: Request) => {
         });
       } catch (_error) {
         await admin.from("mh_video_face_swap_jobs").update({ status: "queued", error_message: "Provider submission status is uncertain; keep this job for administrator reconciliation." }).eq("id", jobId);
-        return reply({ ok: true, status: "queued", jobId, durationSeconds, coinCost, balance: debitRow.balance, note: "Your request was charged and queued, but PiAPI did not confirm receipt. Please contact support before retrying." });
+        return reply({ ok: true, status: "queued", jobId, durationSeconds, coinCost: chargedCoins, balance: debitRow.balance, note: "Your request was charged and queued, but PiAPI did not confirm receipt. Please contact support before retrying." });
       }
       const providerText = await providerResponse.text();
       let providerData: any = {};
       try { providerData = JSON.parse(providerText); } catch { /* handled below */ }
       const taskId = providerData?.data?.task_id || providerData?.task_id;
       if (!providerResponse.ok || !taskId) {
-        await userClient.rpc("mh_refund_room_coins", { p_reference: walletReference, p_reason: "PiAPI rejected video face swap" });
+        const { data: refundResult, error: refundError } = await userClient.rpc("mh_refund_room_coins", { p_reference: walletReference, p_reason: "PiAPI rejected video face swap" });
         await admin.from("mh_video_face_swap_jobs").update({
           status: "failed", error_message: safeText(providerData?.message || providerData?.data?.error?.message || "PiAPI rejected the request."),
         }).eq("id", jobId);
-        return reply({ ok: false, error: safeText(providerData?.message || providerData?.data?.error?.message || "PiAPI rejected the request."), creditsRefunded: true }, 502);
+        return reply({ ok: false, error: safeText(providerData?.message || providerData?.data?.error?.message || "PiAPI rejected the request."), creditsRefunded: !refundError && !!refundResult?.ok }, 502);
       }
 
       await admin.from("mh_video_face_swap_jobs").update({ piapi_task_id: String(taskId), status: "processing", updated_at: new Date().toISOString() }).eq("id", jobId);
       await admin.from("mh_projects").update({ status: "processing", updated_at: new Date().toISOString() }).eq("id", projectId).eq("user_id", user.id);
-      return reply({ ok: true, status: "processing", jobId, durationSeconds, coinCost, balance: debitRow.balance });
+      return reply({ ok: true, status: "processing", jobId, durationSeconds, coinCost: chargedCoins, balance: debitRow.balance });
     }
 
     if (action === "status") {
@@ -224,10 +226,10 @@ Deno.serve(async (req: Request) => {
       const state = String(data?.status || data?.task_status || "").toLowerCase();
       if (["failed", "error", "cancelled", "canceled"].includes(state)) {
         const reason = safeText(data?.error?.message || data?.error?.raw_message || data?.error || result?.message || "PiAPI could not complete this video.");
-        await userClient.rpc("mh_refund_room_coins", { p_reference: job.wallet_reference, p_reason: "Video face swap failed: " + reason });
+        const { data: refundResult, error: refundError } = await userClient.rpc("mh_refund_room_coins", { p_reference: job.wallet_reference, p_reason: "Video face swap failed: " + reason });
         await admin.from("mh_video_face_swap_jobs").update({ status: "failed", error_message: reason, updated_at: new Date().toISOString() }).eq("id", job.id);
         await admin.from("mh_projects").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", job.project_id).eq("user_id", user.id);
-        return reply({ ok: false, status: "failed", error: reason, creditsRefunded: true });
+        return reply({ ok: false, status: "failed", error: reason, creditsRefunded: !refundError && !!refundResult?.ok });
       }
 
       const output = data?.output || {};
