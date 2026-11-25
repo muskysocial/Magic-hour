@@ -113,3 +113,8 @@ begin
 end; $$;
 revoke all on function public.mh_refund_room_coins(text,text) from public;
 grant execute on function public.mh_refund_room_coins(text,text) to authenticated;
+
+alter table public.ms_shipment_messages
+ add column if not exists attachment_path text,
+ add column if not exists attachment_name text,
+ add column if not exists attachment_mime text;
