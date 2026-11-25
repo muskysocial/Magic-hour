@@ -18,7 +18,7 @@ create table if not exists public.mh_magic_hour_cards (
 );
 create index if not exists mh_magic_hour_cards_status_created_idx on public.mh_magic_hour_cards(status,created_at desc);
 alter table public.mh_magic_hour_cards enable row level security;
-revoke all on public.mh_magic_hour_cards from anon, authenticated;
+revoke all on public.mh_magic_hour_cards from public, anon, authenticated;
 grant select on public.mh_magic_hour_cards to authenticated;
 drop policy if exists "Users can view their redeemed Magic Hour cards" on public.mh_magic_hour_cards;
 create policy "Users can view their redeemed Magic Hour cards" on public.mh_magic_hour_cards for select to authenticated using (redeemed_by = auth.uid());
@@ -33,7 +33,7 @@ insert into public.mh_room_pricing(room_key,standard_coin_rate,premium_coin_rate
 values ('live-tracking',1200,800,1800),('headswap',400,400,1),('video-face-swap',300,300,10)
 on conflict(room_key) do update set standard_coin_rate=excluded.standard_coin_rate,premium_coin_rate=excluded.premium_coin_rate,billing_unit_seconds=excluded.billing_unit_seconds,updated_at=now();
 alter table public.mh_room_pricing enable row level security;
-revoke all on public.mh_room_pricing from anon, authenticated;
+revoke all on public.mh_room_pricing from public, anon, authenticated;
 
 create or replace function public.mh_redeem_magic_hour_card(p_code text)
 returns jsonb language plpgsql security definer set search_path=public,auth as $$
