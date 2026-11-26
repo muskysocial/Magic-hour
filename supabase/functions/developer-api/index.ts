@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
   const method = req.method.toUpperCase();
   const auth = req.headers.get("Authorization") || "";
 
-  // Signed-in MuskySocials dashboard actions.
+  // Signed-in Magic Hour dashboard actions.
   if (auth.startsWith("Bearer ") && !auth.slice(7).startsWith("ms_live_")) {
     const userClient = createClient(url, anon, {
       global: { headers: { Authorization: auth } },
@@ -174,10 +174,10 @@ Deno.serve(async (req: Request) => {
     return reply({ ok: false, error: "Unknown developer API management route." }, 404);
   }
 
-  // External developers authenticate using their MuskySocials API key.
+  // External developers authenticate using their Magic Hour API key.
   const apiKey = req.headers.get("x-api-key") || (auth.startsWith("Bearer ms_live_") ? auth.slice(7) : "");
   if (!apiKey || !apiKey.startsWith("ms_live_")) {
-    return reply({ ok: false, error: "Provide your MuskySocials key in the x-api-key header." }, 401);
+    return reply({ ok: false, error: "Provide your Magic Hour key in the x-api-key header." }, 401);
   }
   const { data: keyRow, error: keyError } = await admin.from("ms_api_keys")
     .select("id,user_id").eq("key_hash", await sha256(apiKey)).is("revoked_at", null).maybeSingle();
