@@ -165,25 +165,6 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true });
     }
 
-    if (action === "telemetry") {
-      const visitorId = String(body.visitor_id || "");
-      const eventType = String(body.event_type || "");
-      if (!/^[0-9a-f-]{36}$/i.test(visitorId) || !["javascript_error","unhandled_rejection","page_load"].includes(eventType)) return json({error:"Invalid telemetry event."},400);
-      const since = new Date(Date.now()-5*60_000).toISOString();
-      const recent = await count("mh_site_telemetry",q=>q.eq("visitor_id",visitorId).gte("created_at",since));
-      if (recent >= 12) return json({error:"Telemetry rate limit reached."},429);
-      const duration = Math.max(0,Math.min(600000,Math.trunc(Number(body.duration_ms)||0)));
-      const user = await identify(req);
-      const {error} = await admin.from("mh_site_telemetry").insert({
-        visitor_id:visitorId,user_id:user?.id||null,event_type:eventType,
-        message:String(body.message||"").slice(0,1000),stack:String(body.stack||"").slice(0,4000),
-        path:String(body.path||"/").slice(0,240),duration_ms:duration,
-        user_agent:String(req.headers.get("user-agent")||"").slice(0,300)
-      });
-      if(error)throw error;
-      return json({ok:true});
-    }
-
     if (action === "public_config") {
       const now = new Date().toISOString();
       const [settingsResult, featureResult, announcementResult] = await Promise.all([
@@ -259,33 +240,24 @@ Deno.serve(async (req: Request) => {
       }
       if (room === "Site Monitor") {
         const since = new Date(Date.now() - 5 * 60000).toISOString();
-        const daySince = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-        const [authUsers, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs, storageProbe, telemetry, telemetryCount, clientErrors, pageLoads] = await Promise.all([
+        const [authUsers, guests, activeGuests, projects, assets, failed, shipments, visitors, jobs, storageProbe] = await Promise.all([
           listAuthUsers(), count("ms_guest_visitors", q => q.is("user_id", null)), count("ms_guest_visitors", q => q.is("user_id", null).gte("last_seen_at", since)),
           count("mh_projects"), count("mh_assets"), count("mh_video_jobs", q => q.eq("status", "failed")), count("ms_shipments"),
           admin.from("ms_guest_visitors").select("visitor_id,user_id,last_path,visits,last_seen_at").order("last_seen_at", { ascending: false }).limit(50),
           admin.from("mh_video_jobs").select("id,status,error_message,updated_at,created_at").eq("status", "failed").order("updated_at", { ascending: false }).limit(30),
-          admin.storage.from("magic-hour-assets").list("", { limit: 1 }),
-          admin.from("mh_site_telemetry").select("event_type,message,path,duration_ms,created_at,user_id").order("created_at",{ascending:false}).limit(100),
-          count("mh_site_telemetry",q=>q.gte("created_at",daySince)),
-          count("mh_site_telemetry",q=>q.gte("created_at",daySince).in("event_type",["javascript_error","unhandled_rejection"])),
-          count("mh_site_telemetry",q=>q.gte("created_at",daySince).eq("event_type","page_load"))
+          admin.storage.from("magic-hour-assets").list("", { limit: 1 })
         ]);
-        if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error; if(telemetry.error)throw telemetry.error;
-        const pageSamples=(telemetry.data||[]).filter((x:any)=>x.event_type==="page_load"&&new Date(x.created_at).getTime()>=Date.now()-24*60*60_000).map((x:any)=>Number(x.duration_ms)).filter((x:number)=>Number.isFinite(x)&&x>0);
-        const averagePageLoadMs=pageSamples.length?Math.round(pageSamples.reduce((sum:number,x:number)=>sum+x,0)/pageSamples.length):0;
+        if (visitors.error) throw visitors.error; if (jobs.error) throw jobs.error;
         const health = [
           { name: "Database", status: "healthy", detail: "Live admin database queries completed" },
           { name: "Authentication", status: "healthy", detail: "Supabase Auth account directory responded" },
           { name: "Private storage", status: storageProbe.error ? "warning" : "healthy", detail: storageProbe.error ? storageProbe.error.message : "Private media bucket is reachable" },
-          { name: "Client errors", status: clientErrors > 0 ? "warning" : "healthy", detail: clientErrors + " JavaScript errors or unhandled rejections recorded in the last 24 hours" },
-          { name: "Page performance", status: pageLoads === 0 ? "unknown" : averagePageLoadMs > 5000 ? "warning" : "healthy", detail: pageLoads + " page-load measurements in 24 hours; latest 100 sample average " + (averagePageLoadMs ? averagePageLoadMs + " ms" : "not available") },
           { name: "AI providers", status: "unknown", detail: "Provider availability is not directly probed by this monitor" },
           { name: "Shipment records", status: "healthy", detail: shipments + " shipment records are accessible" }
         ];
-        return json({ loaded: true, description: "Live visitor activity, private storage health, client-side errors and page-load timing. Provider availability is not fabricated.",
-          counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments, telemetry_24h:telemetryCount, client_errors_24h:clientErrors, page_loads_24h:pageLoads, average_page_load_ms:averagePageLoadMs },
-          health, visitors: visitors.data || [], failed_jobs: jobs.data || [], telemetry:telemetry.data||[] });
+        return json({ loaded: true, description: "Live guests seen in the last five minutes, visitor records and service health probes; provider availability is not fabricated.",
+          counts: { users: authUsers.length, guests, active_guests: activeGuests, projects, assets, failed_jobs: failed, shipments },
+          health, visitors: visitors.data || [], failed_jobs: jobs.data || [] });
       }
       if (room === "User Centre") {
         const allAuthUsers = await listAuthUsers();
@@ -472,7 +444,7 @@ Deno.serve(async (req: Request) => {
       if (currentMembershipError) throw currentMembershipError;
       const currentExpiry = currentMembership?.expires_at ? new Date(currentMembership.expires_at) : null;
       const isActive = !!currentMembership && (!!currentMembership.unlimited_duration || (!!currentExpiry && currentExpiry.getTime() > now.getTime()));
-      const isUnlimitedDuration = body.unlimited_duration === true;
+      const isUnlimitedDuration = !!body.unlimited_duration || (isActive && !!currentMembership?.unlimited_duration);
       const renewalBase = isActive && currentExpiry ? currentExpiry : now;
       const expires = new Date(renewalBase.getTime() + days * 86400000);
       const startedAt = isActive && currentMembership?.started_at ? currentMembership.started_at : now.toISOString();
