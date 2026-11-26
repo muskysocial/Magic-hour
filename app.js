@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./api.js?v=20261123-startup2";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./api.js?v=auth-persist-20261126";
 import { AIRPORTS, AIRCRAFT_MODELS, CARRIERS, AIRLINES, resolveShipmentPlace, buildShipmentRoute, routeMetrics, shipmentProgressAt, positionOnRoute, createCheckpointPlan } from "./tracking-engine.js?v=20261123-startup2";
 
 const app = document.querySelector("#app");
