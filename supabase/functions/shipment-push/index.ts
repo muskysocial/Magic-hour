@@ -32,9 +32,10 @@ async function sendToShipment(shipment:any,role:"viewer"|"owner",title:string,me
  const {data:subs,error}=await admin.from("ms_shipment_push_subscriptions").select("id,endpoint,subscription").eq("shipment_id",shipment.id).eq("subscriber_role",role).eq("is_active",true);
  if(error)throw error;
  let sent=0,failed=0;
- const urlPath=role==="viewer"&&shipment.tracking_slug?"/?shipment="+shipment.tracking_slug:"/";
+ const appBase="https://muskysocial.github.io/MuskyP2V-AI-Studio/";
+ const targetUrl=role==="viewer"&&shipment.tracking_slug?new URL("?shipment="+encodeURIComponent(shipment.tracking_slug),appBase).toString():appBase;
  for(const sub of subs||[]){
-  try{await webpush.sendNotification(sub.subscription,JSON.stringify({title,body:message,tag:"shipment-"+shipment.id+"-"+role,url:urlPath.startsWith("http")?urlPath:"https://magichour-black.vercel.app"+urlPath}),{TTL:3600});sent++;}
+  try{await webpush.sendNotification(sub.subscription,JSON.stringify({title,body:message,tag:"shipment-"+shipment.id+"-"+role,url:targetUrl}),{TTL:3600});sent++;}
   catch(e){failed++;const status=Number((e as any)?.statusCode||0);if(status===404||status===410)await admin.from("ms_shipment_push_subscriptions").update({is_active:false,disabled_at:new Date().toISOString()}).eq("id",sub.id);}
  }
  return {sent,failed,subscribers:subs?.length||0};
