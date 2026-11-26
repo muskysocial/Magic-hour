@@ -883,7 +883,7 @@ async function changeShipmentMovement(button){
  const currentProgress=Math.max(0,Math.min(100,Number(shipmentCreated.is_obstructed?shipmentCreated.paused_progress:shipmentProgressAt(shipmentCreated)*100)||0));
  const elapsed=shipmentCreated.obstructed_at?Math.max(0,Math.floor((now.getTime()-new Date(shipmentCreated.obstructed_at).getTime())/1000)):0;
  const patch=pausing?{
-  is_obstructed:true,status:"blocked",public_status_label:"Shipment paused",
+  is_obstructed:true,status:"blocked",public_status_label:"Paused by Customs",
   obstruction_reason:"Paused by Customs",obstruction_location:shipmentCreated.current_location||null,
   obstructed_at:stamp,paused_progress:currentProgress,progress_percent:currentProgress,updated_at:stamp
  }:{
