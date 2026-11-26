@@ -1121,7 +1121,7 @@ if(b.dataset.action==="check-piapi-access"){
   finally{workspaceBusy=false;render();}
   return;
  }
- if(b.dataset.action==="menu"){document.querySelector(".sidebar")?.classList.toggle("show-mobile");const s=document.querySelector(".sidebar");if(s){s.style.display=s.style.display==="block"?"none":"block";s.style.position="fixed";s.style.zIndex="30";s.style.top="64px";s.style.bottom="70px";s.style.left="0";s.style.width="245px";s.style.background="#080e17";s.style.boxShadow="10px 0 35px #0009";}return;}if(b.dataset.action==="run-background"){
+ if(b.dataset.action==="menu"){const sidebar=app.querySelector(".sidebar");if(sidebar)sidebar.classList.toggle("show-mobile");return;}if(b.dataset.action==="run-background"){
  if(!selectedAssetFile){workspaceNotice="Choose an image first.";render();return;}
  const allowed=["image/jpeg","image/png","image/webp"];
  if(!allowed.includes(selectedAssetFile.type)){workspaceNotice="Use a JPG, PNG or WebP image.";render();return;}
