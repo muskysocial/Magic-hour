@@ -833,7 +833,7 @@ async function enableShipmentPush(button){
  if(!SHIPMENT_VAPID_PUBLIC_KEY){alert("Shipment notifications are not configured yet.");return;}
  button.disabled=true;button.textContent="Enabling…";
  try{
-  const permission=await Notification.requestPermission();if(permission!=="granted"){const panel=button.closest(".shipment-push-optin");if(panel)panel.innerHTML='<b>Notifications are blocked in this browser.</b><small>Open this site’s browser permissions, allow Notifications, then reload this tracking page.</small>';return;}
+  const permission=await Notification.requestPermission();if(permission!=="granted"){const panel=button.closest(".shipment-push-optin");if(permission==="denied"){if(panel)panel.innerHTML='<b>Notifications are blocked in this browser.</b><small>Open this site’s browser permissions, allow Notifications, then reload this tracking page.</small>';}else{button.disabled=false;button.textContent="Enable notifications";}return;}
   const registration=await navigator.serviceWorker.ready;
   let subscription=await registration.pushManager.getSubscription();
   if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKeyBytes(SHIPMENT_VAPID_PUBLIC_KEY)});
