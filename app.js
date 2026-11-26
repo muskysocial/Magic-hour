@@ -1396,3 +1396,35 @@ document.addEventListener("click",async e=>{
 });
 
 async function loadMagicHourPricing(){const form=document.getElementById("magic-hour-pricing-form");if(!form)return;try{const {data,error}=await supabase.functions.invoke("magic-hour-cards",{body:{action:"pricing_list"}});if(error)throw error;if(data?.error)throw new Error(data.error);for(const p of data.pricing||[]){if(p.room_key==="live-tracking"){form.elements.tracking_standard.value=p.standard_coin_rate;form.elements.tracking_premium.value=p.premium_coin_rate;}if(p.room_key==="headswap")form.elements.headswap_standard.value=p.standard_coin_rate;if(p.room_key==="video-face-swap")form.elements.video_standard.value=p.standard_coin_rate;}}catch(error){console.warn("Room pricing:",error.message||error);}}
+
+
+// Mobile navigation and Shipment Room panels: handle these before the general delegated click handler.
+document.addEventListener("click",event=>{
+ const menu=event.target.closest('#app [data-action="menu"]');
+ if(menu){
+  event.preventDefault();event.stopPropagation();
+  const sidebar=document.querySelector("#app .sidebar");
+  if(sidebar){const opened=sidebar.classList.toggle("show-mobile");menu.setAttribute("aria-expanded",String(opened));}
+  return;
+ }
+ const open=event.target.closest("#app [data-shipment-room-open]");
+ if(open){
+  event.preventDefault();event.stopPropagation();
+  const target=open.dataset.shipmentRoomOpen;
+  const home=document.querySelector("#app .shipment-room-home");
+  if(home){home.hidden=true;home.style.display="none";}
+  document.querySelectorAll("#app [data-shipment-room-panel]").forEach(panel=>{
+   const active=panel.dataset.shipmentRoomPanel===target;
+   panel.hidden=!active;panel.style.display=active?"block":"none";panel.open=active;
+   if(active){panel.scrollIntoView({behavior:"smooth",block:"start"});}
+  });
+  return;
+ }
+ const back=event.target.closest("#app [data-shipment-room-back]");
+ if(back){
+  event.preventDefault();event.stopPropagation();
+  document.querySelectorAll("#app [data-shipment-room-panel]").forEach(panel=>{panel.hidden=true;panel.style.display="none";panel.open=false;});
+  const home=document.querySelector("#app .shipment-room-home");
+  if(home){home.hidden=false;home.style.display="";home.scrollIntoView({behavior:"smooth",block:"start"});}
+ }
+},true);
