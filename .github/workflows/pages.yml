@@ -31,6 +31,33 @@ jobs:
         run: test -f index.html && test -f app.js && test -f api.js && test -f tracking-engine.js
       - name: Check application JavaScript syntax
         run: node --check app.js && node --check api.js && node --check tracking-engine.js
+      - name: Validate relative HTML, manifest, and service-worker assets
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const manifest = JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
+          const sw = fs.readFileSync('sw.js', 'utf8');
+          const refs = [...html.matchAll(/(?:src|href)=[\"'](\.\/[^\"'?#]+)/g)].map(m => m[1]);
+          refs.push(...manifest.icons.map(icon => icon.src));
+          refs.push('./sw.js');
+          const missing = [...new Set(refs)].filter(ref => !fs.existsSync(path.resolve(ref)));
+          if (missing.length) {
+            console.error('Missing Pages assets:', missing.join(', '));
+            process.exit(1);
+          }
+          if (manifest.name !== 'Magic Hour' || manifest.short_name !== 'Magic Hour') {
+            throw new Error('PWA name and short_name must both be Magic Hour');
+          }
+          if (manifest.start_url !== './' || manifest.scope !== './') {
+            throw new Error('PWA start_url and scope must remain relative to the Pages subpath');
+          }
+          if (!sw.includes('self.registration.scope')) {
+            throw new Error('Service worker must resolve shell assets from its registration scope');
+          }
+          console.log('Relative HTML, manifest, icon, and service-worker assets are valid.');
+          NODE
       - name: Test shipment journey engine
         run: node --test tracking-engine.test.js
       - name: Configure GitHub Pages
