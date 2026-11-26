@@ -859,7 +859,7 @@ async function enableOwnerShipmentPush(button){
 }
 document.addEventListener("click",event=>{const button=event.target.closest("#shipment-push-enable");if(button)enableShipmentPush(button);});
 document.addEventListener("click",event=>{const button=event.target.closest("#shipment-owner-push-enable");if(button)enableOwnerShipmentPush(button);});
-async function enableAllOwnerShipmentPush(button){
+async async function enableAllOwnerShipmentPush(button){
  if(!currentUser||!userShipments.length){alert("Create or open a shipment first.");return;}
  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)){alert("This browser does not support web push. Please use Chrome on Android.");return;}
  button.disabled=true;button.textContent="Enabling…";
