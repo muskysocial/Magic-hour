@@ -27,6 +27,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Verify required app files
+        run: test -f index.html && test -f app.js && test -f api.js && test -f tracking-engine.js
+      - name: Check application JavaScript syntax
+        run: node --check app.js && node --check api.js && node --check tracking-engine.js
       - name: Test shipment journey engine
         run: node --test tracking-engine.test.js
       - name: Configure GitHub Pages
