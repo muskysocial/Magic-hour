@@ -1,0 +1,43 @@
+project_id = "uhlxjbnzjxmvepqqiblb"
+
+[functions.developer-api]
+verify_jwt = false
+
+[functions.remove-background]
+verify_jwt = true
+
+[functions.paystack-membership]
+verify_jwt = false
+
+[functions.shipment-push]
+verify_jwt = false
+
+[functions.bfs-face-swap]
+verify_jwt = true
+
+[functions.video-face-swap]
+verify_jwt = true
+
+[functions.campaign-service]
+verify_jwt = false
+
+[functions.piapi-video-diagnostics]
+verify_jwt = true
+
+[functions.gemini-video-diagnostics]
+verify_jwt = true
+
+[functions.magic-hour-cards]
+verify_jwt = true
+
+[functions.shipment-public]
+verify_jwt = false
+
+[functions.admin-console]
+verify_jwt = false
+
+[functions.fal-video-diagnostics]
+verify_jwt = true
+
+[functions.piapi-video]
+verify_jwt = true
