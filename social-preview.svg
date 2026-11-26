@@ -11,7 +11,7 @@
 <path d="M0 500 Q280 390 520 510 T1200 455 V630 H0Z" fill="#07102b"/>
 <g opacity=".28" stroke="#42c9ff" fill="none"><path d="M0 180H1200M0 250H1200M0 320H1200M0 390H1200"/><path d="M150 0V630M300 0V630M450 0V630M600 0V630M750 0V630M900 0V630M1050 0V630"/></g>
 <text x="70" y="95" fill="#fff" font-family="Arial,sans-serif" font-size="48" font-weight="700">Magic Hour</text>
-<text x="72" y="137" fill="#c6caff" font-family="Arial,sans-serif" font-size="27" letter-spacing="5">MAGIC HOUR</text>
+<text x="72" y="137" fill="#c6caff" font-family="Arial,sans-serif" font-size="27" letter-spacing="5">CREATIVE TOOLS</text>
 <text x="72" y="190" fill="#d9eaff" font-family="Arial,sans-serif" font-size="25">TRACK  •  CREATE  •  EXPLORE</text>
 <ellipse cx="480" cy="345" rx="340" ry="95" fill="#008dff" opacity=".18" filter="url(#shadow)"/>
 <path d="M115 350 L385 320 L540 205 L570 208 L495 320 L755 305 L825 265 L847 270 L805 330 L900 350 L900 365 L805 382 L845 440 L824 446 L755 405 L495 390 L570 505 L540 510 L385 395 L115 370Z" fill="#f4f8ff" stroke="#6bdcff" stroke-width="5"/>
