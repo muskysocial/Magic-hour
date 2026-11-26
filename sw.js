@@ -1,4 +1,4 @@
-const CACHE_NAME="magic-hour-pwa-v34";
+const CACHE_NAME="magic-hour-pwa-v35";
 const APP_SHELL=["./","./index.html","./app.css","./app.js","./api.js","./tracking-engine.js","./manifest.webmanifest","./icon.svg"].map(path=>new URL(path,self.registration.scope).href);
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
