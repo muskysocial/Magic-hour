@@ -1281,3 +1281,33 @@ html[data-user-theme="dark"] textarea::placeholder{color:#a7b6c9!important;opaci
 
 /* Reliable mobile navigation: the menu button toggles one CSS state only. */
 @media(max-width:720px){.sidebar.show-mobile{display:block!important;position:fixed;top:56px;bottom:70px;left:0;width:min(280px,85vw);z-index:50;overflow-y:auto;background:var(--panel,#fff);box-shadow:10px 0 35px #0005;border-right:1px solid var(--line);}}
+
+
+/* Magic Hour: preserve the approved Android app layout on touch devices,
+   including browsers that request a wide/desktop viewport. */
+@media (pointer:coarse) and (hover:none){
+  .shell{padding-bottom:76px!important}
+  .topbar{height:64px!important;padding:0 14px!important;gap:10px!important}
+  .brand{font-size:19px!important;gap:9px!important}
+  .brand-mark{width:34px!important;height:34px!important}
+  .layout{display:block!important;grid-template-columns:minmax(0,1fr)!important;max-width:none!important}
+  .sidebar{display:none!important}
+  .content{width:100%!important;min-width:0!important;padding:16px 16px 24px!important}
+  .hero{min-height:190px!important;grid-template-columns:1fr .48fr!important;padding:20px 18px!important;border-radius:20px!important}
+  .hero h1{font-size:clamp(25px,5vw,34px)!important;letter-spacing:-1.2px!important}
+  .hero p{font-size:13px!important}
+  .hero-art{height:150px!important}
+  .orb{width:105px!important;height:105px!important}
+  .chatbar{margin:14px 0 24px!important}
+  .tools-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+  .tool-card{min-height:184px!important;padding:12px 9px!important;border-radius:17px!important}
+  .tool-card .art{height:76px!important}
+  .tool-card .tool-icon{width:66px!important;height:66px!important;border-radius:50%!important;font-size:35px!important}
+  .tool-card h3{font-size:12px!important;line-height:1.25!important}
+  .tool-card p{font-size:10px!important}
+  .more-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+  .mini-tool{padding:12px 6px!important}
+  .bottom-nav{display:flex!important;justify-content:space-around!important;gap:0!important;padding:9px 12px max(9px,env(safe-area-inset-bottom))!important}
+  .bottom-nav button{min-width:48px!important}
+  .desktop-only{display:none!important}
+}
