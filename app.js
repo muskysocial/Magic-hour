@@ -246,17 +246,26 @@ async function loadHomepageHeroAsset(){
  }catch(error){console.warn("Homepage hero image:",error?.message||error);}
 }
 function renderMaintenance(){return '<section class="empty-panel"><div class="empty-icon">'+iconSvg("settings",34)+'</div><h1 class="page-title">Magic Hour is being updated</h1><p class="page-sub">We’ll be back shortly. Thank you for your patience.</p></section>';}
-function renderHome(){if(publicSiteConfig.settings?.maintenance_mode&&!isAdmin)return '<section class="empty-panel"><div class="empty-icon">'+iconSvg("settings",34)+'</div><h1 class="page-title">Magic Hour is being updated</h1><p class="page-sub">We’ll be back shortly. Thank you for your patience.</p></section>';return `${publicSiteConfig.settings?.announcement?`<div class="site-announcement-banner">${esc(publicSiteConfig.settings.announcement)}</div>`:""}
-${renderCampaignPublicPlacements()}
-${renderPublicAnnouncements()}
-<section class="hero">
-  <div><div class="eyebrow">YOUR CREATIVE SPACE, ALL IN ONE PLACE</div><h1>${esc(publicSiteConfig.settings?.homepage_headline||"What shall we create today?")}</h1><p>Design, transform and create with AI — all in one studio.</p></div>
-  <div class="hero-art">${homepageHeroImageData?`<img class="hero-banner-photo" src="${homepageHeroImageData}" alt="Flight attendant looking out toward an approaching passenger aircraft">`:`<div class="orbit"></div><div class="orb"></div><span class="spark one">${iconSvg("sparkles",21)}</span><span class="spark two">${iconSvg("sparkles",16)}</span>`}</div>
-</section>
-<form class="chatbar" id="chat-form"><span aria-hidden="true">${iconSvg("sparkles",18)}</span><input id="chat-input" placeholder="Ask Magic Hour anything…" aria-label="Ask Magic Hour anything"><button class="send" aria-label="Send message">${iconSvg("send",18)}</button></form>
-<section class="home-tool-section"><div class="section-head"><div><h2>Your creative tools</h2><p>Choose a workspace to get started</p></div><button class="text-btn" data-page="All tools">Explore all ${iconSvg("arrow",13)}</button></div><div class="tools-grid home-primary-grid">${tools.filter(t=>publicSiteConfig.features?.find(f=>f.tool_id===t.id)?.enabled!==false).slice(0,6).map(toolCard).join("")}</div></section>
-<section class="more-section home-tool-section"><div class="section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button class="text-btn" data-page="All tools">View all ${iconSvg("arrow",13)}</button></div><div class="more-grid home-secondary-grid">${moreTools.slice(0,6).map(([n,i])=>`<button class="mini-tool" data-extra="${esc(n)}"><span>${iconSvg(i,23)}</span><b>${esc(n)}</b></button>`).join("")}</div></section>
-<section class="pro-banner"><div class="crown">${iconSvg("crown",32)}</div><div class="pro-copy"><b>Upgrade to Pro</b><p>Get more credits, unlock premium tools and enjoy priority processing.</p></div><button class="pro-button" data-modal="pro">Go Pro ${iconSvg("arrow",13)}</button></section>`;}
+function renderHome(){
+ if(publicSiteConfig.settings?.maintenance_mode&&!isAdmin)return '<section class="empty-panel"><div class="empty-icon">'+iconSvg("settings",34)+'</div><h1 class="page-title">Magic Hour is being updated</h1><p class="page-sub">We’ll be back shortly. Thank you for your patience.</p></section>';
+ const primary=[
+  {id:"canva",name:"Canva Me",icon:"palette",colors:"#0866FF,#00B2FF"},
+  {id:"headswap",name:"Image HeadSwap",icon:"scan-face",colors:"#00A884,#2BD99F"},
+  {id:"videoswap",name:"Video Face Swap",icon:"clapperboard",colors:"#F5841F,#F7B928"},
+  {id:"format",name:"Format",icon:"folder-symlink",colors:"#7B4DFF,#B07CFF"},
+  {id:"social",name:"All Social Media Platform",icon:"smartphone",colors:"#E1306C,#F77737"},
+  {id:"shipment-room",name:"Shipment Journey",icon:"truck",colors:"#0F766E,#38BDF8"}
+ ].filter(t=>publicSiteConfig.features?.find(f=>f.tool_id===t.id)?.enabled!==false);
+ const secondary=[["AI Video","video","#F02849,#FF7A59"],["AI Image","image","#0866FF,#7B4DFF"],["Background Remover","scissors","#00A884,#7ED957"],["Photo Enhancer","sparkles","#F7B928,#F5841F"],["AI Avatar","user-round","#7B4DFF,#E1306C"],["Voice Generator","mic","#0F766E,#00B2FF"]];
+ const tile=(icon,colors,small=false)=>'<span class="mh-new-tile '+(small?'small':'')+'" style="--tile-gradient:linear-gradient(135deg,'+colors.split(",").join(",")+')">'+iconSvg(icon,small?23:30)+'</span>';
+ return `${publicSiteConfig.settings?.announcement?`<div class="site-announcement-banner">${esc(publicSiteConfig.settings.announcement)}</div>`:""}
+ ${renderCampaignPublicPlacements()} ${renderPublicAnnouncements()}
+ <section class="mh-new-hero"><div class="mh-new-hero-copy"><small>Your creative space</small><h1>${esc(publicSiteConfig.settings?.homepage_headline||"What shall we create today?")}</h1><p>Design, transform and create with AI, all in one studio.</p></div><div class="mh-new-hero-art" aria-hidden="true">${iconSvg("send",96)}</div></section>
+ <form class="mh-new-ask" id="chat-form"><span>${iconSvg("sparkles",20)}</span><input id="chat-input" placeholder="Ask Magic Hour anything…" aria-label="Ask Magic Hour anything"><button type="submit" aria-label="Send message">${iconSvg("send",20)}</button></form>
+ <section class="mh-new-section"><div class="mh-new-section-head"><div><h2>Your creative tools</h2><p>Choose a workspace to get started</p></div><button data-page="All tools">Explore all</button></div><div class="mh-new-primary">${primary.map(t=>'<button class="mh-new-tool" data-tool="'+t.id+'">'+tile(t.icon,t.colors)+'<b>'+t.name+'</b></button>').join("")}</div></section>
+ <section class="mh-new-section"><div class="mh-new-section-head"><div><h2>More AI tools</h2><p>More ways to bring your ideas to life</p></div><button data-page="All tools">View all</button></div><div class="mh-new-secondary">${secondary.map(t=>'<button class="mh-new-row" data-extra="'+esc(t[0])+'">'+tile(t[1],t[2],true)+'<b>'+esc(t[0])+'</b></button>').join("")}</div></section>
+ <section class="mh-new-pro"><span>${iconSvg("crown",28)}</span><div><b>Upgrade to Pro</b><small>More credits, premium tools, priority processing.</small></div><button data-modal="pro">Go Pro</button></section>`;
+}
 
 function recentThumbs(kind,selectedId=""){
  const images=userAssets.filter(asset=>asset.mime_type?.startsWith("image/")&&asset.storage_path&&asset.signedUrl&&!dismissedRecentAssetIds.has(asset.id)).slice(0,12);
