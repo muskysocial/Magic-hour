@@ -47,6 +47,16 @@ jobs:
             console.error('Missing Pages assets:', missing.join(', '));
             process.exit(1);
           }
+          if (!html.includes('https://muskysocial.github.io/magic-hour/')) {
+            throw new Error('Canonical GitHub Pages URL must use the lowercase magic-hour path');
+          }
+          if (html.includes('https://muskysocial.github.io/Magic-hour/')) {
+            throw new Error('Mixed-case GitHub Pages URLs are forbidden');
+          }
+          const app = fs.readFileSync('app.js', 'utf8');
+          if (app.includes('https://muskysocial.github.io/magic-hour/?shipment=')) {
+            throw new Error('Shipment tracking links must be derived from the deployed app base URL');
+          }
           if (manifest.name !== 'Magic Hour' || manifest.short_name !== 'Magic Hour') {
             throw new Error('PWA name and short_name must both be Magic Hour');
           }
