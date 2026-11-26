@@ -47,11 +47,11 @@ jobs:
             console.error('Missing Pages assets:', missing.join(', '));
             process.exit(1);
           }
-          if (!html.includes('https://muskysocial.github.io/magic-hour/')) {
-            throw new Error('Canonical GitHub Pages URL must use the lowercase magic-hour path');
+          if (!html.includes('https://magichours.pages.dev/')) {
+            throw new Error('Canonical URL must use the Magic Hour Cloudflare Pages domain');
           }
           if (html.includes('https://muskysocial.github.io/Magic-hour/')) {
-            throw new Error('Mixed-case GitHub Pages URLs are forbidden');
+            throw new Error('Mixed-case legacy GitHub Pages URLs are forbidden');
           }
           const app = fs.readFileSync('app.js', 'utf8');
           if (app.includes('https://muskysocial.github.io/magic-hour/?shipment=')) {
