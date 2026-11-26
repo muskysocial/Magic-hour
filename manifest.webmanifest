@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Magic Hour AI Studio",
+  "name": "Magic Hour",
   "short_name": "Magic Hour",
-  "description": "Your AI creative studio for image swaps, video tools and creative workflows.",
+  "description": "Magic Hour creative tools, media creation and shipment tracking.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
