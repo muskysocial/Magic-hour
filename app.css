@@ -1278,3 +1278,6 @@ html[data-user-theme="dark"] textarea::placeholder{color:#a7b6c9!important;opaci
 .mh-push-actions #shipment-push-later{background:#ededed;color:#111}
 .mh-push-actions button:disabled{opacity:.65}
 @media(min-width:700px){.mh-push-prompt{align-items:center;padding-top:32px!important}.mh-push-art{width:min(560px,100%)}.mh-push-copy,.mh-push-actions{width:min(560px,100%)}}
+
+/* Reliable mobile navigation: the menu button toggles one CSS state only. */
+@media(max-width:720px){.sidebar.show-mobile{display:block!important;position:fixed;top:56px;bottom:70px;left:0;width:min(280px,85vw);z-index:50;overflow-y:auto;background:var(--panel,#fff);box-shadow:10px 0 35px #0005;border-right:1px solid var(--line);}}
