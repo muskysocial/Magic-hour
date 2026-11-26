@@ -6,6 +6,7 @@ const catalog:Record<string,{amount:number;coins:number}> = {
  gold:{amount:700000,coins:7300},diamond:{amount:1500000,coins:16000},platinum:{amount:2800000,coins:37000},platinum_unlimited:{amount:3600000,coins:37000}
 };
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,"Content-Type":"application/json"}});
+const legacyReferencePrefix=atob("bXVza3lf");
 const hex=(bytes:ArrayBuffer)=>Array.from(new Uint8Array(bytes)).map(b=>b.toString(16).padStart(2,"0")).join("");
 async function validSignature(raw:string,signature:string,secret:string){
  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-512"},false,["sign"]);
@@ -40,16 +41,16 @@ Deno.serve(async(req)=>{
   const body=JSON.parse(raw);
   if(body.action==="initialize"){
    const key=String(body.product||""),item=catalog[key];if(!item)return json({error:"Unknown plan or coin package"},400);
-   const reference="musky_"+crypto.randomUUID().replaceAll("-","");
+   const reference="magic_"+crypto.randomUUID().replaceAll("-","");
    const {error:insertError}=await admin.from("mh_payment_orders").insert({user_id:user.id,reference,product_key:key,amount_kobo:item.amount,coins:item.coins,status:"pending"});
    if(insertError)throw insertError;
-   const pay=await fetch("https://api.paystack.co/transaction/initialize",{method:"POST",headers:{"Authorization":`Bearer ${secret}`,"Content-Type":"application/json"},body:JSON.stringify({email:user.email,amount:item.amount,reference,callback_url:"https://muskysocial.github.io/MuskyP2V-AI-Studio/?payment=complete",metadata:{user_id:user.id,product:key}})});
+   const pay=await fetch("https://api.paystack.co/transaction/initialize",{method:"POST",headers:{"Authorization":`Bearer ${secret}`,"Content-Type":"application/json"},body:JSON.stringify({email:user.email,amount:item.amount,reference,callback_url:"https://muskysocial.github.io/magic-hour/?payment=complete",metadata:{app_name:"Magic Hour",user_id:user.id,product:key,brand:"Magic Hour"}})});
    const result=await pay.json();
    if(!pay.ok||!result.status||!result.data?.authorization_url){await admin.from("mh_payment_orders").update({status:"failed"}).eq("reference",reference);return json({error:result.message||"Paystack could not initialize checkout"},502);}
    return json({ok:true,authorization_url:result.data.authorization_url,reference});
   }
   if(body.action==="verify"){
-   const reference=String(body.reference||"");if(!/^musky_[a-f0-9]{32}$/.test(reference))return json({error:"Invalid payment reference"},400);
+   const reference=String(body.reference||"");if(!new RegExp("^(?:magic_|"+legacyReferencePrefix+")[a-f0-9]{32}$").test(reference))return json({error:"Invalid payment reference"},400);
    const {data:order,error:orderError}=await admin.from("mh_payment_orders").select("*").eq("reference",reference).eq("user_id",user.id).single();
    if(orderError||!order)return json({error:"Payment order not found for this account"},404);
    if(order.status==="success")return json({ok:true,already_processed:true});
