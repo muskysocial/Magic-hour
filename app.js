@@ -14,7 +14,7 @@ const moreTools = [
   ["AI Video","video"],["AI Image","image"],["Background Remover","scissors"],["Photo Enhancer","sparkles"],["AI Avatar","user-round"],["Voice Generator","mic"],["Music Generator","music"],["Image to Video","film"],["AI Art Creator","wand-sparkles"],["Video Enhancer","clapperboard"],["Caption Writer","pen-line"],["More tools","plus"]
 ];
 let savedTheme;try{const storedTheme=localStorage.getItem("mh-appearance");savedTheme=storedTheme||(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");}catch{savedTheme=(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";}if(!["light","dark"].includes(savedTheme))savedTheme="light";
-function applyUserTheme(theme){savedTheme=theme==="dark"?"dark":"light";document.documentElement.dataset.userTheme=savedTheme;document.documentElement.style.colorScheme=savedTheme;try{localStorage.setItem("mh-appearance",savedTheme);}catch{}}
+function applyUserTheme(theme){savedTheme=theme==="dark"?"dark":"light";document.documentElement.dataset.userTheme=savedTheme;document.documentElement.style.colorScheme=savedTheme;const themeMeta=document.querySelector('meta[name="theme-color"]');if(themeMeta)themeMeta.content=savedTheme==="dark"?"#18191A":"#F0F2F5";try{localStorage.setItem("mh-appearance",savedTheme);}catch{}}
 applyUserTheme(savedTheme);
 let homepageHeroImageData="";
 let page = "Home";
