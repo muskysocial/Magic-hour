@@ -25,14 +25,14 @@ async function pushConfig(){
  const {data,error}=await admin.rpc("get_shipment_push_config");if(error)throw error;
  const publicKey=String(data?.shipment_vapid_public_key||""),privateKey=String(data?.shipment_vapid_private_key||"");
  if(!publicKey||!privateKey)throw new Error("Web Push keys are not configured.");
- webpush.setVapidDetails(String(data?.shipment_vapid_subject||"https://muskysocial.github.io/MuskyP2V-AI-Studio/"),publicKey,privateKey);
+ webpush.setVapidDetails(String(data?.shipment_vapid_subject||"https://muskysocial.github.io/magic-hour/"),publicKey,privateKey);
  return {publicKey,privateKey};
 }
 async function sendToShipment(shipment:any,role:"viewer"|"owner",title:string,message:string){
  const {data:subs,error}=await admin.from("ms_shipment_push_subscriptions").select("id,endpoint,subscription").eq("shipment_id",shipment.id).eq("subscriber_role",role).eq("is_active",true);
  if(error)throw error;
  let sent=0,failed=0;
- const appBase="https://muskysocial.github.io/MuskyP2V-AI-Studio/";
+ const appBase="https://muskysocial.github.io/magic-hour/";
  const targetUrl=role==="viewer"&&shipment.tracking_slug?new URL("?shipment="+encodeURIComponent(shipment.tracking_slug),appBase).toString():appBase;
  for(const sub of subs||[]){
   try{await webpush.sendNotification(sub.subscription,JSON.stringify({title,body:message,tag:"shipment-"+shipment.id+"-"+role,url:targetUrl}),{TTL:3600});sent++;}
