@@ -1,12 +1,13 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-// Restored magic hour Supabase project.
-// This publishable key is designed for browser use with Row Level Security enabled.
-// Never put a service-role or secret key in this file.
+// Magic Hour browser client. Keep Supabase sessions in this origin's localStorage
+// so a reload restores the signed-in user on the same site origin.
 export const SUPABASE_URL = "https://uhlxjbnzjxmvepqqiblb.supabase.co";
 export const SUPABASE_ANON_KEY = "sb_publishable_8w4Mjwha6bANdd6dbotf8w_7qZeGHUL";
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
+    storage: window.localStorage,
+    storageKey: "sb-uhlxjbnzjxmvepqqiblb-auth-token",
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true
