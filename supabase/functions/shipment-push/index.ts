@@ -25,7 +25,7 @@ async function pushConfig(){
  const {data,error}=await admin.rpc("get_shipment_push_config");if(error)throw error;
  const publicKey=String(data?.shipment_vapid_public_key||""),privateKey=String(data?.shipment_vapid_private_key||"");
  if(!publicKey||!privateKey)throw new Error("Web Push keys are not configured.");
- webpush.setVapidDetails(String(data?.shipment_vapid_subject||"mailto:support@magichour-black.vercel.app"),publicKey,privateKey);
+ webpush.setVapidDetails(String(data?.shipment_vapid_subject||"https://muskysocial.github.io/MuskyP2V-AI-Studio/"),publicKey,privateKey);
  return {publicKey,privateKey};
 }
 async function sendToShipment(shipment:any,role:"viewer"|"owner",title:string,message:string){
