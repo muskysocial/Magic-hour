@@ -13,12 +13,12 @@
 <main class="panel">
 <div class="mark">📦</div>
 <h1>Opening secure shipment tracking</h1>
-<p class="muted">Your shipment link is being transferred to the unified Magic Hour tracking page.</p>
-<a id="continue" href="https://magichour-black.vercel.app/">Continue to tracking</a>
+<p class="muted">Your secure tracking link now opens directly on the Magic Hour GitHub Pages website.</p>
+<a id="continue" href="../">Continue to tracking</a>
 </main>
 <script>
 (function(){
-  const destination=new URL("https://magichour-black.vercel.app/");
+  const destination=new URL("../",location.href);
   const params=new URLSearchParams(location.search);
   for(const [key,value] of params)destination.searchParams.set(key,value);
   const target=destination.toString();
