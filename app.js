@@ -1347,7 +1347,7 @@ document.addEventListener("click",async event=>{
  button.hidden=true;
 });
 if("serviceWorker" in navigator){
- window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("PWA service worker:",error)));
+ window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(error=>console.warn("PWA service worker:",error)));
 }
 
 function renderCampaignPublicPlacements(){
