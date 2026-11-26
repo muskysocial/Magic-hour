@@ -276,7 +276,7 @@ body{font-size:14px}
 @media(max-width:520px){.membership-dialog{width:calc(100% - 20px)!important;padding:17px!important;border-radius:20px!important}.membership-card{flex-basis:86%;min-height:390px}.coin-packages{gap:6px}.coin-package b{font-size:16px}}
 
 
-/* MuskySocials Developer API dashboard */
+/* Magic Hour Developer API dashboard */
 .developer-panel{width:100%;max-width:900px;margin:20px 0;padding:clamp(15px,3vw,23px);border:1px solid #34304f;border-radius:19px;background:radial-gradient(circle at 90% 0%,#38265a55,transparent 35%),linear-gradient(145deg,#11121d,#090b12);color:#f2f1ff;text-align:left}
 .developer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:17px}
 .developer-kicker{font-size:9px;font-weight:900;letter-spacing:1.7px;color:#b7a1ff}
