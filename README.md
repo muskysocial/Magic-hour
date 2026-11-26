@@ -2,9 +2,9 @@
 
 Magic Hour is published from this repository with GitHub Pages.
 
-- Intended website URL after the repository is renamed to `magic-hour`: https://muskysocial.github.io/magic-hour/
+- Canonical website URL (repository name must be exactly `magic-hour`): https://muskysocial.github.io/magic-hour/
 - Public shipment tracking: https://muskysocial.github.io/magic-hour/?shipment=<tracking-slug>
-- Intended source repository after rename: https://github.com/muskysocial/magic-hour
+- Source repository: https://github.com/muskysocial/magic-hour
 
 ## Hosting and deployment
 
@@ -18,7 +18,7 @@ GitHub Pages is a static host. It does not run Node.js server routes or host a d
 
 ## Required one-time GitHub setup
 
-1. Rename this repository to `magic-hour` in GitHub: **Settings → General → Repository name → Rename**.
+1. **Required:** rename this repository to lowercase `magic-hour` in GitHub: **Settings → General → Repository name → Rename**. The current repository name is `Magic-hour`; until renamed, GitHub Pages may serve a case-sensitive `/Magic-hour/` path while tracking and authentication links use `/magic-hour/`.
 2. Confirm GitHub Pages is enabled with **Deploy from a branch / GitHub Actions** (the repository workflow uses GitHub Actions).
 3. Add a repository Actions secret named `SUPABASE_ACCESS_TOKEN`:
    - Open Supabase account settings at https://supabase.com/dashboard/account/tokens.
@@ -42,7 +42,7 @@ The Paystack initialization function sets the callback URL to `https://muskysoci
 
 ## Shipment tracking
 
-All three saved shipment tracking links in the database have been updated to the new intended GitHub Pages URL. Shipment records, passwords, conversations, events, and push subscriptions remain in Supabase. The public tracking page calls the `shipment-public` and `shipment-push` Edge Functions.
+The three existing shipment tracking links in project metadata use the canonical lowercase GitHub Pages URL. New tracking links are built from the deployed app's own base path so they follow the repository path automatically. Shipment records, passwords, conversations, events, and push subscriptions remain in Supabase. The public tracking page calls the `shipment-public` and `shipment-push` Edge Functions.
 
 The local shipment engine is in `tracking-engine.js`; run its tests with:
 
