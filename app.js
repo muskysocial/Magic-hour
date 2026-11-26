@@ -18,6 +18,9 @@ function applyUserTheme(theme){savedTheme=theme==="dark"?"dark":"light";document
 applyUserTheme(savedTheme);
 let homepageHeroImageData="";
 let page = "Home";
+// Preserve transient mobile UI state when asynchronous account refreshes re-render the app.
+let mobileMenuOpen = false;
+let shipmentRoomActivePanel = "";
 let activeTool = null;
 let messages = [];
 let sessionState = "checking";
@@ -929,7 +932,19 @@ function render(){if(new URLSearchParams(location.search).has("shipment")){app.i
 <div class="layout"><aside class="sidebar"><div class="side-label">Workspace</div>${sidebarLink("Home","home")}${sidebarLink("New chat","chat")}${sidebarLink("Library","library")}${sidebarLink("Projects","grid")}${sidebarLink("All tools","sparkles")}<div class="side-label">Account</div>${sidebarLink("Settings","settings")}${isAdmin?sidebarLink("Site Control Centre","shield-check"):""}<div class="side-bottom"><b>${iconSvg("crown",15)} &nbsp;magic hour Pro</b><p>More credits. More creative freedom. Faster workflows.</p><button class="upgrade-mini" data-modal="pro">Explore Pro</button></div></aside>
 <main class="content">${(()=>{let enabled=false;try{enabled=localStorage.getItem("mh-owner-push-all:"+currentUser.id)==="1"}catch{}const permission=("Notification" in window)?Notification.permission:"unsupported";enabled=enabled||permission==="granted"||permission==="denied";return userShipments.length&&!enabled?'<aside class="owner-push-entry"><div><b>🔔 Enable shipment notifications</b><small>Get recipient messages and shipment alerts on this device.</small></div><button type="button" id="owner-push-entry-enable">Enable alerts</button></aside>':""})()}${body}</main></div>
 <nav class="bottom-nav"><button class="${page==="Home"&&!activeTool?"active":""}" data-page="Home"><span>${iconSvg("home",18)}</span>Home</button><button class="${page==="Library"?"active":""}" data-page="Library"><span>${iconSvg("library",18)}</span>Library</button><button class="create-fab" data-page="Create" aria-label="Create">＋</button><button class="${page==="Projects"?"active":""}" data-page="Projects"><span>${iconSvg("grid",18)}</span>Projects</button><button class="${page==="Settings"?"active":""}" data-page="Settings"><span>${iconSvg("settings",18)}</span>Settings</button></nav>
-</div>`;if(page==="Settings"&&!developerLoaded&&!developerLoading)loadDeveloperDashboard();if(activeTool==="social"&&pendingSocialSelection.length){app.querySelectorAll("input[data-social-item]").forEach(input=>{input.checked=pendingSocialSelection.includes(input.dataset.socialItem);});}persistWorkspaceState();if(currentUser&&"Notification" in window&&Notification.permission==="granted")syncOwnerPushIfGranted();}
+</div>`;applyPersistentMobileUiState();if(page==="Settings"&&!developerLoaded&&!developerLoading)loadDeveloperDashboard();if(activeTool==="social"&&pendingSocialSelection.length){app.querySelectorAll("input[data-social-item]").forEach(input=>{input.checked=pendingSocialSelection.includes(input.dataset.socialItem);});}persistWorkspaceState();if(currentUser&&"Notification" in window&&Notification.permission==="granted")syncOwnerPushIfGranted();}
+function applyPersistentMobileUiState(){
+ const sidebar=app.querySelector(".sidebar");
+ if(sidebar)sidebar.classList.toggle("show-mobile",mobileMenuOpen);
+ const home=app.querySelector(".shipment-room-home");
+ if(home){const active=!!shipmentRoomActivePanel;home.hidden=active;home.style.display=active?"none":"";}
+ app.querySelectorAll("[data-shipment-room-panel]").forEach(panel=>{
+  const active=panel.dataset.shipmentRoomPanel===shipmentRoomActivePanel;
+  panel.hidden=!active;panel.style.display=active?"block":"none";
+  if(panel.tagName==="DETAILS")panel.open=active;
+ });
+}
+
 function goPage(p){page=p;activeTool=null;if(p==="New chat"){selectedChatShipmentId="";loadShipmentInboxMessages().then(()=>{if(page==="New chat"&&!activeTool)render();});}render();window.scrollTo({top:0,behavior:"smooth"});persistWorkspaceState();}
 function openTool(id){const feature=publicSiteConfig.features?.find(x=>x.tool_id===id);if(!isAdmin&&feature?.enabled===false){alert("This tool is currently unavailable.");return;}activeTool=id;page="Home";selectedFile=null;selectedAssetFile=null;selectedReferenceFace=null;selectedTargetImage=null;workspaceResultUrl="";currentProjectId=null;workspaceNotice="";render();window.scrollTo({top:0,behavior:"smooth"});}
 async function claimDailyCoins(){
@@ -1404,13 +1419,14 @@ document.addEventListener("click",event=>{
  if(menu){
   event.preventDefault();event.stopPropagation();
   const sidebar=document.querySelector("#app .sidebar");
-  if(sidebar){const opened=sidebar.classList.toggle("show-mobile");menu.setAttribute("aria-expanded",String(opened));}
+  if(sidebar){mobileMenuOpen=!mobileMenuOpen;sidebar.classList.toggle("show-mobile",mobileMenuOpen);menu.setAttribute("aria-expanded",String(mobileMenuOpen));}
   return;
  }
  const open=event.target.closest("#app [data-shipment-room-open]");
  if(open){
   event.preventDefault();event.stopPropagation();
   const target=open.dataset.shipmentRoomOpen;
+  shipmentRoomActivePanel=target;
   const home=document.querySelector("#app .shipment-room-home");
   if(home){home.hidden=true;home.style.display="none";}
   document.querySelectorAll("#app [data-shipment-room-panel]").forEach(panel=>{
@@ -1423,6 +1439,7 @@ document.addEventListener("click",event=>{
  const back=event.target.closest("#app [data-shipment-room-back]");
  if(back){
   event.preventDefault();event.stopPropagation();
+  shipmentRoomActivePanel="";
   document.querySelectorAll("#app [data-shipment-room-panel]").forEach(panel=>{panel.hidden=true;panel.style.display="none";panel.open=false;});
   const home=document.querySelector("#app .shipment-room-home");
   if(home){home.hidden=false;home.style.display="";home.scrollIntoView({behavior:"smooth",block:"start"});}
