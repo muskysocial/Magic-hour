@@ -13,7 +13,7 @@ const tools = [
 const moreTools = [
   ["AI Video","video"],["AI Image","image"],["Background Remover","scissors"],["Photo Enhancer","sparkles"],["AI Avatar","user-round"],["Voice Generator","mic"],["Music Generator","music"],["Image to Video","film"],["AI Art Creator","wand-sparkles"],["Video Enhancer","clapperboard"],["Caption Writer","pen-line"],["More tools","plus"]
 ];
-let savedTheme="light";try{savedTheme=localStorage.getItem("mh-appearance")||"light";}catch{}if(!["light","dark"].includes(savedTheme))savedTheme="light";
+let savedTheme="dark";try{savedTheme=localStorage.getItem("mh-appearance")||"dark";}catch{}if(!["light","dark"].includes(savedTheme))savedTheme="light";
 function applyUserTheme(theme){savedTheme=theme==="dark"?"dark":"light";document.documentElement.dataset.userTheme=savedTheme;document.documentElement.style.colorScheme=savedTheme;try{localStorage.setItem("mh-appearance",savedTheme);}catch{}}
 applyUserTheme(savedTheme);
 let homepageHeroImageData="";
